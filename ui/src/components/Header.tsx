@@ -47,9 +47,9 @@ export default function Header({ activeCharacter, onCharacterChange, status }: H
             <optgroup key={show} label={show}>
               {Object.entries(CHARACTERS)
                 .filter(([, meta]) => meta.show === show)
-                .map(([name, { emoji }]) => (
-                  <option key={name} value={name}>
-                    {emoji} {name}
+                .map(([name, { emoji, supported }]) => (
+                  <option key={name} value={name} disabled={!supported}>
+                    {emoji} {name}{!supported ? ' (coming soon)' : ''}
                   </option>
                 ))}
             </optgroup>

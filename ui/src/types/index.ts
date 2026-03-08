@@ -15,6 +15,8 @@ export type CharacterShow = 'The Big Bang Theory' | 'The Office'
 export interface CharacterMeta {
   emoji: string
   show: CharacterShow
+  /** True only for characters that have ChromaDB scenes + profiles built. */
+  supported?: boolean
 }
 
 // Discriminated union of all server → client WebSocket message types

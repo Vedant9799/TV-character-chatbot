@@ -8,6 +8,7 @@ interface UseChatReturn {
   activeCharacter: string
   setCharacter: (char: string) => void
   sendMessage: (text: string) => void
+  stopStreaming: () => void
   clearChat: () => void
 }
 
@@ -150,6 +151,22 @@ export function useChat(
     [isStreaming, activeCharacter, send],
   )
 
+  // ── Stop streaming mid-reply ─────────────────────────────────────────────
+  // Client-side only: freeze the current bot message as-is and mark it done.
+  // The server's Ollama thread keeps running but tokens arrive to a null
+  // streamingId and are silently discarded by the token handler.
+  const stopStreaming = useCallback(() => {
+    const id = streamingId.current
+    if (!id) return
+    if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null }
+    flushBuffer(id)                              // drain any buffered tokens into state
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, streaming: false } : m)),
+    )
+    streamingId.current = null
+    setIsStreaming(false)
+  }, [flushBuffer])
+
   const clearChat = useCallback(() => {
     if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null }
     tokenBuffer.current = ''
@@ -159,5 +176,5 @@ export function useChat(
     send({ type: 'set_character', character: activeCharacter })
   }, [activeCharacter, send])
 
-  return { messages, isStreaming, activeCharacter, setCharacter, sendMessage, clearChat }
+  return { messages, isStreaming, activeCharacter, setCharacter, sendMessage, stopStreaming, clearChat }
 }

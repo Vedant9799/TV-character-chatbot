@@ -1,0 +1,795 @@
+{
+  "Sheldon": {
+    "show": "The Big Bang Theory",
+    "speech_patterns": {
+      "total_lines": 11687,
+      "avg_words_per_line": 15.0,
+      "median_words_per_line": 11.0,
+      "max_words_in_line": 186,
+      "total_words": 174951,
+      "unique_words": 22747,
+      "vocabulary_richness": 0.13,
+      "avg_char_per_line": 81.4,
+      "question_ratio": 0.263,
+      "exclamation_ratio": 0.037
+    },
+    "distinctive_language": {
+      "distinctive_words": {
+        "(knock)": 46.53,
+        "bom,": 46.53,
+        "knock)": 36.25,
+        "knock,": 36.01,
+        "(knock,": 35.39,
+        "returned": 25.59,
+        "preposterous.": 23.27,
+        "efforts": 18.61,
+        "zoom,": 18.61,
+        "decay.": 18.61,
+        "remarkable.": 16.29,
+        "irrelevant.": 16.29,
+        "drat.": 16.29,
+        "lizard": 16.29,
+        "bazinga!": 16.29,
+        "bladder.": 16.29,
+        "noise.": 16.29,
+        "sequence.": 16.29,
+        "(rolls": 16.29,
+        "attempting": 15.12,
+        "lord!": 13.96,
+        "pointless": 13.96,
+        "rendered": 13.96,
+        "so-called": 13.96,
+        "buttocks.": 13.96,
+        "events": 13.96,
+        "presents": 13.96,
+        "entry": 13.96,
+        "parallel": 13.96,
+        "television.": 13.96
+      },
+      "repeated_phrases": {
+        "in the": 928,
+        "of the": 834,
+        "(knock, knock, knock)": 825,
+        "i don\u2019t": 750,
+        "going to": 692,
+        "i have": 674,
+        "i was": 636,
+        "this is": 628,
+        "to the": 608,
+        "knock, knock)": 584,
+        "(knock, knock,": 578,
+        "and i": 574,
+        "do you": 518,
+        "on the": 504,
+        "are you": 490
+      },
+      "catchphrases": {
+        "hello.": 64,
+        "yes.": 58,
+        "no.": 44,
+        "thank you.": 31,
+        "why?": 23,
+        "what?": 20,
+        "all right.": 20,
+        "okay.": 16,
+        "really?": 15,
+        "of course.": 10,
+        "yeah.": 9,
+        "yes?": 9,
+        "hi.": 8,
+        "sarcasm?": 8,
+        "why not?": 8
+      }
+    },
+    "relationships": {
+      "scenes_together": {
+        "Leonard": 1112,
+        "Penny": 715,
+        "Howard": 641,
+        "Raj": 590,
+        "Amy": 480,
+        "Bernadette": 148,
+        "Stuart": 79,
+        "Mrs Cooper": 26,
+        "Priya": 25,
+        "Kripke": 21
+      },
+      "most_responds_to_me": {
+        "Leonard": 3416,
+        "Penny": 2330,
+        "Amy": 1588,
+        "Howard": 967,
+        "Raj": 828,
+        "Bernadette": 145,
+        "Stuart": 118
+      },
+      "i_most_respond_to": {
+        "Leonard": 3594,
+        "Penny": 2319,
+        "Amy": 1696,
+        "Howard": 961,
+        "Raj": 882,
+        "Bernadette": 152,
+        "Stuart": 122
+      }
+    },
+    "tone_indicators": {
+      "scientific_technical": 0.017,
+      "management_speak": 0.0,
+      "authority_rank": 0.011,
+      "survival_outdoors": 0.008,
+      "sales_business": 0.006,
+      "sarcasm_markers": 0.067,
+      "affection": 0.017,
+      "insults_put_downs": 0.007,
+      "uncertainty": 0.039,
+      "formal_language": 0.004,
+      "pop_culture": 0.017,
+      "self_reference": 0.265
+    },
+    "evolution_by_season": {
+      "1": {
+        "lines": 1132,
+        "avg_words": 13.4,
+        "question_ratio": 0.194
+      },
+      "2": {
+        "lines": 1378,
+        "avg_words": 14.8,
+        "question_ratio": 0.279
+      },
+      "3": {
+        "lines": 1329,
+        "avg_words": 15.2,
+        "question_ratio": 0.251
+      },
+      "4": {
+        "lines": 1392,
+        "avg_words": 14.0,
+        "question_ratio": 0.267
+      },
+      "5": {
+        "lines": 1042,
+        "avg_words": 16.9,
+        "question_ratio": 0.265
+      },
+      "6": {
+        "lines": 1010,
+        "avg_words": 16.2,
+        "question_ratio": 0.258
+      },
+      "7": {
+        "lines": 1106,
+        "avg_words": 14.6,
+        "question_ratio": 0.302
+      },
+      "8": {
+        "lines": 1107,
+        "avg_words": 15.5,
+        "question_ratio": 0.288
+      },
+      "9": {
+        "lines": 1115,
+        "avg_words": 15.5,
+        "question_ratio": 0.26
+      },
+      "10": {
+        "lines": 1076,
+        "avg_words": 14.2,
+        "question_ratio": 0.269
+      }
+    },
+    "sample_dialogues": {
+      "longest_monologues": [
+        "Thanks, shorty,I\u2019ll take it from here. All right, you people ready to have some fun? You have a basic understanding of differential calculus and at least one year of algebraic topology? Well, then here come the jokes. Why did the chicken cross the Mobius strip? To get to the same side, bazinga! All right, a neutron walks into a bar and asks, how much for a drink? The bartender says, for you, no charge. Hello? I know you\u2019re out there. I can hear you metabolizing oxygen and expelling carbon dioxide. Looks like we have some academic dignitaries in the audience. Dr. Randall from the geology department, only man who\u2019s happy when they take his work for granite. Ba-da cha! I kid the geologists, of course, but it\u2019s only \u2019cause I have no respect for the field. Let\u2019s get serious for a moment. Why are we all here? \u2018Cause we\u2019re scientists. And what do scientists study? The universe. And what\u2019s the universe made of? I am so glad you asked. (Singing) There\u2019s antimony, arsenic, aluminium, selenium, and hydrogen and oxygen and nitrogen and rhenium, and nickel, neodymium,",
+        "Right here. All right, team, open up your practice kits. As the university did not permit me to bring the actual equipment we\u2019ll be using to the Cheesecake Factory, because apparently I\u2019m \u201cridiculous,\u201d I\u2019ve provided substitutes which will exercise your fine motor skills. Leonard, you will be doing a series of complex mathematical problems on a vintage Casio model 1175 calculator watch I received when I won the Earth Science medal in 3rd grade. Treat it with respect. Raj, you will be painting sideburns and a Van Dyke on a six-inch figurine of Legolas the elf. Now, remember, a Van Dyke is a goatee without a moustache. Wolowitz, you will be completing a series of delicate surgical procedures on the classic children\u2019s game, Operation. To begin with, you will remove funny bone for two hundred dollars.",
+        "Yeah, I do. (All groan). As is the tradition, I have prepared a series of disrespectful jokes which generate humour at Howard\u2019s expense. Prepare to have your ribs tickled. Howard, I always thought you\u2019d be the last one of us to ever get married, because you are so short and unappealing. Am I right? Let\u2019s see here. Oh, seriously though, Howard, you\u2019re actually one of the most intelligent people I know. And that\u2019s a zinger, because you\u2019re not. I\u2019ve always thought that you\u2019d make someone a fine husband someday. Assuming you\u2019d be able to get the parts, and develop the engineering skills to assemble them, which I don\u2019t see as likely. Hacha! Okay, let me see here. Okay, kidding aside, Howard, you are a good friend. And I wish you nothing but happiness. Bazinga, I don\u2019t!",
+        "Hello, I\u2019m Dr. Sheldon Cooper. Welcome to Sheldon Cooper Presents Fun with Flags. My apologies that this episode is coming late. I did shoot one last week, in honour of Black History Month, but I was informed by my roommate that my spot-on portrayal of George Washington Carver could be considered wildly racist. My heart goes out to the members of the African-American community, who, like me, have been kept down by The Man. Now, Fun with Flags is not just for the flag aficionado, it\u2019s also for the flag novice, so, to help me with that, please welcome my friend, neighbour, and flag virgin, yeah, not a real virgin. She\u2019s had coitus many times. Sometimes within earshot of this flag enthusiast. Once while he was trying to watch The Incredibles. Penny.",
+        "Hello. I\u2019m Dr. Sheldon Cooper, and welcome to Sheldon Cooper Presents: Fun With Flags. You may notice that I\u2019m holding a remote control. That\u2019s because my cameraperson and co-host, Dr. Amy Farrah Fowler, has chosen to end her relationship with me. I\u2019m going to pause here to let that sink in. Okay. If you need to pause a little longer, just click the pause button. But the show must go on. And thankfully, all the things my girlfriend used to do can be taken care of with my right hand. Anyway, let\u2019s not spend any more time talking about her. We\u2019re here to talk about flags. Tonight\u2019s theme, flags of countries that have been torn apart and the women I have a feeling were responsible."
+      ],
+      "random_sample": [
+        "Let me guess.",
+        "What\u2019s the bad news?",
+        "I made tea.",
+        "Every Saturday since we have lived in this apartment, I have awakened at 6:15, poured myself a bowl of cereal, added a quarter cup of 2% milk, sat on this end of this couch, turned on BBC America and watched Doctor Who.",
+        "Oh. Well, now I\u2019m sorry I asked.",
+        "Mmm, all right. It would appear as if alcohol is playing keep-away with your intelligence. Good night. Please note, it is now past ten p.m. Per our roommate agreement, kindly refrain from raucous laughter, clinking of glasses, and celebratory gunfire.",
+        "He\u2019s not wrong. It was your crackpot idea that he deserves love.",
+        "I was going to say sad. I don\u2019t know why I hedged.",
+        "\u2013 Because it\u2019s almost eleven o\u2019clock.",
+        "Maybe when I publish it, I\u2019ll include an inhaler."
+      ]
+    }
+  },
+  "Leonard": {
+    "show": "The Big Bang Theory",
+    "speech_patterns": {
+      "total_lines": 9745,
+      "avg_words_per_line": 9.7,
+      "median_words_per_line": 7.0,
+      "max_words_in_line": 201,
+      "total_words": 94833,
+      "unique_words": 11599,
+      "vocabulary_richness": 0.1223,
+      "avg_char_per_line": 50.6,
+      "question_ratio": 0.298,
+      "exclamation_ratio": 0.026
+    },
+    "distinctive_language": {
+      "distinctive_words": {
+        "lesley,": 30.82,
+        "blanket": 12.84,
+        "sorry!": 12.84,
+        "leslie.": 10.27,
+        "bran": 10.27,
+        "buddy,": 9.76,
+        "radiation": 9.25,
+        "leslie,": 8.56,
+        "intolerant.": 8.56,
+        "we\u2019re,": 8.56,
+        "garbage": 8.56,
+        "insane.": 7.71,
+        "switzerland.": 6.42,
+        "slim": 6.42,
+        "swear,": 6.42,
+        "dating?": 6.16,
+        "crappy": 6.16,
+        "(goes": 5.99,
+        "slow.": 5.99,
+        "favour,": 5.14,
+        "joyce": 5.14,
+        "lesley": 5.14,
+        "look?": 5.14,
+        "grade.": 5.14,
+        "tape": 5.14,
+        "know\u2026": 5.14,
+        "privacy?": 5.14,
+        "dump": 5.14,
+        "shorts": 5.14,
+        "superfluid": 5.14
+      },
+      "repeated_phrases": {
+        "i don\u2019t": 646,
+        "are you": 500,
+        "want to": 454,
+        "do you": 422,
+        "in the": 416,
+        "going to": 412,
+        "what are you": 306,
+        "this is": 292,
+        "have a": 268,
+        "and i": 268,
+        "to be": 268,
+        "what do you": 264,
+        "i was": 264,
+        "to the": 254,
+        "you know": 254
+      },
+      "catchphrases": {
+        "no.": 93,
+        "what?": 88,
+        "hey.": 68,
+        "yes.": 62,
+        "yeah.": 60,
+        "thank you.": 41,
+        "really?": 31,
+        "okay.": 22,
+        "what are you doing?": 22,
+        "why?": 18,
+        "hi.": 16,
+        "sure.": 15,
+        "why not?": 14,
+        "great.": 13,
+        "so?": 13
+      }
+    },
+    "relationships": {
+      "scenes_together": {
+        "Sheldon": 1112,
+        "Penny": 813,
+        "Howard": 705,
+        "Raj": 639,
+        "Amy": 266,
+        "Bernadette": 166,
+        "Stuart": 66,
+        "Priya": 39,
+        "Wil": 22,
+        "Man": 20
+      },
+      "most_responds_to_me": {
+        "Sheldon": 3594,
+        "Penny": 2630,
+        "Howard": 1019,
+        "Raj": 733,
+        "Amy": 204,
+        "Priya": 118,
+        "Bernadette": 103
+      },
+      "i_most_respond_to": {
+        "Sheldon": 3416,
+        "Penny": 2727,
+        "Howard": 999,
+        "Raj": 731,
+        "Amy": 198,
+        "Priya": 125,
+        "Bernadette": 96
+      }
+    },
+    "tone_indicators": {
+      "scientific_technical": 0.009,
+      "management_speak": 0.0,
+      "authority_rank": 0.003,
+      "survival_outdoors": 0.003,
+      "sales_business": 0.004,
+      "sarcasm_markers": 0.06,
+      "affection": 0.013,
+      "insults_put_downs": 0.008,
+      "uncertainty": 0.041,
+      "formal_language": 0.001,
+      "pop_culture": 0.011,
+      "self_reference": 0.139
+    },
+    "evolution_by_season": {
+      "1": {
+        "lines": 1213,
+        "avg_words": 9.6,
+        "question_ratio": 0.247
+      },
+      "2": {
+        "lines": 1290,
+        "avg_words": 9.1,
+        "question_ratio": 0.305
+      },
+      "3": {
+        "lines": 1141,
+        "avg_words": 9.7,
+        "question_ratio": 0.349
+      },
+      "4": {
+        "lines": 1102,
+        "avg_words": 8.7,
+        "question_ratio": 0.328
+      },
+      "5": {
+        "lines": 914,
+        "avg_words": 10.3,
+        "question_ratio": 0.324
+      },
+      "6": {
+        "lines": 771,
+        "avg_words": 10.8,
+        "question_ratio": 0.283
+      },
+      "7": {
+        "lines": 854,
+        "avg_words": 10.3,
+        "question_ratio": 0.293
+      },
+      "8": {
+        "lines": 893,
+        "avg_words": 10.3,
+        "question_ratio": 0.296
+      },
+      "9": {
+        "lines": 846,
+        "avg_words": 9.4,
+        "question_ratio": 0.286
+      },
+      "10": {
+        "lines": 721,
+        "avg_words": 9.7,
+        "question_ratio": 0.254
+      }
+    },
+    "sample_dialogues": {
+      "longest_monologues": [
+        "It was L. Frank Baum who said no thief, however skillful, can rob one of knowledge, and that is why knowledge is the best and safest treasure, wow, I\u2019m boring myself. Sorry, I can\u2019t see any of your faces right now, but I bet they look like this. Uh, you know, I, I wrote an entire speech to say how high school prepares you and what a wonderful place it is, but I hated it. Maybe high school\u2019s great if you look like this, but I didn\u2019t even feel like I existed at that school. And now that I think about it, I bet a lot of you feel the same way. So, for the remainder of my speech, this is for the invisible kids. Uh, maybe you never fit in. Or maybe you\u2019re the smallest kid in the school, or the heaviest or the weirdest. Maybe you\u2019re graduating and you still haven\u2019t had your first kiss. By the way, 19, and Geraldine Coco, wherever you are, thank you. Maybe you don\u2019t have any friends. And guess what? That\u2019s okay. While all the popular kids are off doing whatever, I don\u2019t know what they were doing \u2019cause I was never there.",
+        "Good evening, ladies and gentlemen. My name is Dr. Leonard Hofstadter, and it is my very great honour to introduce the winner of this year\u2019s Chancellor\u2019s award for Science and my good friend, Dr. Sheldon Cooper. But before I do, I\u2019d like to share with you a letter from Sheldon\u2019s mother, who couldn\u2019t be here tonight. Isn\u2019t that nice? His mother sent him a letter. She\u2019s proud of him. I wonder what that feels like. Dear Shelly. That\u2019s what she calls him. Shelly, it\u2019s a pet name. You know what my mother\u2019s pet name for me is? Leonard. But I digress. Dear Shelly. I am so proud of\u2026 (continues as background noise)",
+        "Of course I\u2019m going to do something. Uh, Howard, you check the comic book store. Raj, go to the Thai restaurant. I\u2019ll stay here with Penny in her apartment. (His phone rings) Oh, damn it. It\u2019s Sheldon\u2019s mother. A break cannot be caught. Hi, Mrs. Cooper. He is? Sheldon went home to Texas. Yeah, no, I know he resigned. Yes, I guess it kind of is our fault. No, no, no, you, you\u2019re right, someone needs to come talk to him. Don\u2019t worry, I\u2019ll take care of it. Yeah. All right. New plan. Howard, you and Raj go to Texas. I\u2019ll stay here with Penny in her apartment.",
+        "Uh, excellent question. Um, I suppose I\u2019ve always been into science, you know. My mother and father are scientists, so I was kind of led in that direction. Uh, pushed might be a better way to describe it. To be honest with you guys, when I was your age, I wanted to be a rap star. Like Snoop Dogg, but with a healthy respect for the police. Yeah, no, sure, you laugh. Just like my mother did. After I confided, I was derided and chided, my moms and I collided. She said my dreams were misguided. That\u2019s just a little freestyle.",
+        "I mean, I\u2019m a perfectly nice guy. There\u2019s no reason we couldn\u2019t go to the restaurant and have a lovely dinner. Maybe take a walk afterwards, talk about things we have in common, \u201cyou love pottery? I love pottery!\u201d You know, there\u2019s a pause, we both know what\u2019s happening, I lean in, we kiss, it\u2019s a little tentative at first but then I realise, she\u2019s kissing me back, and she\u2019s biting my lower lip, you know, she wants me, this thing is going the distance, we\u2019re going to have sex! Oh God! Oh, my God!"
+      ],
+      "random_sample": [
+        "The surf and turf sounds good. See if they have corn on the cob.",
+        "You too, swell, also.",
+        "Really?",
+        "Thank you for coming on such short notice.",
+        "So, are we still taking things slow? Because a gunshot wound today, last week, I slammed my thumb in the kitchen drawer. We don\u2019t know how much time I have.",
+        "When do we leave?",
+        "Because it doesn\u2019t matter. I don\u2019t care if we\u2019re a ten or a two.",
+        "Maybe we\u2019re not ready to hang out as friends.",
+        "Uh, it turns out my grandfather had died.",
+        "He just made that easier."
+      ]
+    }
+  },
+  "Michael": {
+    "show": "The Office",
+    "speech_patterns": {
+      "total_lines": 10888,
+      "avg_words_per_line": 13.6,
+      "median_words_per_line": 8.0,
+      "max_words_in_line": 164,
+      "total_words": 147660,
+      "unique_words": 16585,
+      "vocabulary_richness": 0.1123,
+      "avg_char_per_line": 70.3,
+      "question_ratio": 0.29,
+      "exclamation_ratio": 0.136
+    },
+    "distinctive_language": {
+      "distinctive_words": {
+        "i'm": 3771.48,
+        "don't": 3432.56,
+        "it's": 3133.05,
+        "that's": 2132.05,
+        "you're": 1639.43,
+        "we're": 1048.29,
+        "let's": 989.18,
+        "can't": 811.83,
+        "didn't": 587.2,
+        "i'll": 571.44,
+        "he's": 555.67,
+        "what's": 480.79,
+        "so...": 437.44,
+        "dwight,": 437.44,
+        "dwight.": 417.74,
+        "there's": 401.98,
+        "pam.": 386.21,
+        "ok.": 384.24,
+        "i've": 382.27,
+        "doesn't": 362.57,
+        "pam,": 350.74,
+        "she's": 346.8,
+        "they're": 346.8,
+        "um...": 331.04,
+        "dwight": 319.22,
+        "pam": 291.63,
+        "just...": 271.92,
+        "dunder": 256.16,
+        "...": 240.4,
+        "who's": 236.46
+      },
+      "repeated_phrases": {
+        "going to": 1046,
+        "you know": 928,
+        "i am": 908,
+        "and i": 902,
+        "this is": 778,
+        "i don't": 778,
+        "in the": 744,
+        "i have": 696,
+        "to be": 572,
+        "you know what?": 564,
+        "i think": 502,
+        "do you": 484,
+        "i want": 446,
+        "of the": 442,
+        "have a": 438
+      },
+      "catchphrases": {
+        "okay.": 96,
+        "yes.": 77,
+        "yeah.": 65,
+        "what?": 61,
+        "no.": 45,
+        "ok.": 39,
+        "really?": 28,
+        "thank you.": 28,
+        "all right.": 27,
+        "hey.": 23,
+        "alright.": 20,
+        "yeah?": 19,
+        "well...": 17,
+        "oh.": 15,
+        "yep.": 15
+      }
+    },
+    "relationships": {
+      "scenes_together": {
+        "Dwight": 665,
+        "Pam": 497,
+        "Jim": 466,
+        "Kevin": 231,
+        "Andy": 210,
+        "Oscar": 207,
+        "Ryan": 203,
+        "Phyllis": 191,
+        "Stanley": 168,
+        "Angela": 165
+      },
+      "most_responds_to_me": {
+        "Dwight": 1557,
+        "Jim": 987,
+        "Pam": 921,
+        "Jan": 492,
+        "Holly": 355,
+        "Andy": 313,
+        "Ryan": 311
+      },
+      "i_most_respond_to": {
+        "Dwight": 1536,
+        "Jim": 984,
+        "Pam": 944,
+        "Jan": 492,
+        "Holly": 356,
+        "Ryan": 331,
+        "Andy": 301
+      }
+    },
+    "tone_indicators": {
+      "scientific_technical": 0.0,
+      "management_speak": 0.005,
+      "authority_rank": 0.007,
+      "survival_outdoors": 0.003,
+      "sales_business": 0.021,
+      "sarcasm_markers": 0.081,
+      "affection": 0.024,
+      "insults_put_downs": 0.01,
+      "uncertainty": 0.052,
+      "formal_language": 0.001,
+      "pop_culture": 0.001,
+      "self_reference": 0.275
+    },
+    "evolution_by_season": {
+      "1": {
+        "lines": 490,
+        "avg_words": 17.3,
+        "question_ratio": 0.343
+      },
+      "2": {
+        "lines": 1848,
+        "avg_words": 14.0,
+        "question_ratio": 0.313
+      },
+      "3": {
+        "lines": 1704,
+        "avg_words": 13.7,
+        "question_ratio": 0.286
+      },
+      "4": {
+        "lines": 1379,
+        "avg_words": 14.6,
+        "question_ratio": 0.274
+      },
+      "5": {
+        "lines": 2063,
+        "avg_words": 12.9,
+        "question_ratio": 0.275
+      },
+      "6": {
+        "lines": 1976,
+        "avg_words": 12.5,
+        "question_ratio": 0.293
+      },
+      "7": {
+        "lines": 1426,
+        "avg_words": 13.0,
+        "question_ratio": 0.283
+      },
+      "9": {
+        "lines": 2,
+        "avg_words": 11.0,
+        "question_ratio": 0.0
+      }
+    },
+    "sample_dialogues": {
+      "longest_monologues": [
+        "I know we have to register as a consensual sexual relationship with HR. My question: do I do it as the man? Does she do it as my superior? I don't know. That leads to other issues that we may have in our relationship. It's, uh,  Excuse me. Hello? Hi! Just talking about you. The camera? No. Uh huh. How's traffic? I miss you. What. Ok. Well, if it was a mistake, it was a wonderful mistake. No.  Would you excuse me?  No, I did not intentionally get you drunk. Um hmm. No, no.  This is just a fight. This is just a first fight of many fights we're gonna have. Right. No. Wha-so-I don't understand, you wanna see other people. Only other people. Wh-why, ok, I think you're still a little bit drunk  Excuse me? Excuse me?!  I think you're, yes, why don't you just come back here, go to the hotel, have a few drinks and-no, no. I didn't slip you something!",
+        "Hi Holly it's Michael, I just wanted to call and let you know that I was thinking about what you said. It's just. You know? It's weird. Today I ended up seeing a lot of women that I used to date, and in my mind they were all great. And then when I actually saw them, it was mostly a freak show. And you and me, that must have been a real train wreck. You know what, Holly? You're wrong. You are wrong. I remember every second of us. And talking to them today, I don't feel for them anything like what I feel for you. I didn't joke with any of them, I joked with you. You are the only one who was actually happy to hear from me. And I don't know why you downgraded what we had but I did not make us up. Ok. Oh, wait, and you should talk to a doctor because you might have herpes. Bye.",
+        "You may be asking yourself, \"What am I doing on a trampoline?\" Well, I thought I'd bounce here for a while, relieve some stress, and then move on with my day. Not! Here's the plan. Dwight, is going to gather all of the office workers and all of the warehouse guys, we're going to have another safety seminar. Only this time, where's Michael? Oh my God! He is on the roof! Now I have got their attention. I... tell them, about the cold hard facts of depression. And then I say, \"Hey! You ever seen a suicide?\" And I jump. And they freak out. And they get to see... the dangers of depression with their own eyes. Nice side note: They might think \"Hey, I should have been nicer to Michael.\" But that's... not why I'm doing this... Then, I land on the trampoline, take a couple extra bounces for fun. I climb off, walk around the corner... Ta-freakin'-da! ",
+        "Well I'm sure that you must all have very, very busy schedules, so I appreciate you meeting with us here today. What this is is a business that I have worked toward my entire life. Hey!  I have assembled what I believe to be the most exciting, sought-after talent in the industry today. Ladies and gentlemen, I present to you the dream team. From our very own Scranton, Pennsylvania - Pam Beesly. Pretty Pam is always reaching for the stars and someday, she may just surprise us all and grab one. Meet Vikram. From his humble beginnings as a - stay standing - from his humble beginnings as a prominent surgeon, he risked it all to become the most successful telemarketer in the lipophedrene industry. And do not call it a comeback. The youngest vice president in the history of Dunder Mifflin, and recent bowling alley employee, Ryan Howard is about to make a splash in paper.",
+        "It's ok. We're having fun. It's not actually the first time I've been embarrassed by a pond. In high school, the girls volleyball team always used to hrow me into the frozen lake. Four years in a row. Oh... it was freezing.  No. No. No. Oh, this is even worse.  Couple weeks ago I went to get a new cellphone and I wanted on of those packages where you have, you know, the friends- the five- the friends and family thing and the guys was like, 'Who are your 5 friends?' and I'm, like, 'Uh... ' I didn't even know I couldn't even think.  Oh, my God. It was so embarrassing. That was- oh. I don't even have Jan's cell phone number and I hate her! She won't give it to me. I was like, 'Oh, I guess I'm a loser. 'A luh-whooooo a za her'. Too far! God! Thanks a lot, man. Thanks for the advice."
+      ],
+      "random_sample": [
+        "Here we are ladies and gentlemen. Everybody ready? Last one down is a rotten egg.  Watch out for snakes!",
+        "Another time, Packer held this guy's head in the toilet for like a minute. Guy had no sense of humor about it. Probably why he wasn't hired.",
+        "What about a raise based on merit?",
+        "Okay, see you in a bit. Dwight hit a bear. He'll be here in a sec.",
+        "Are you kidding me?",
+        "No.",
+        "You did?",
+        "Thank you Santa. Happy Holidays.",
+        "I have my per diem.  I already know what I am going to spend this on. I am going to buy a sweater.",
+        "Hey, Schneider, real quick. What do you call a butt load of lawyers driving off a cliff?"
+      ]
+    }
+  },
+  "Dwight": {
+    "show": "The Office",
+    "speech_patterns": {
+      "total_lines": 6790,
+      "avg_words_per_line": 11.1,
+      "median_words_per_line": 7.0,
+      "max_words_in_line": 154,
+      "total_words": 75103,
+      "unique_words": 12805,
+      "vocabulary_richness": 0.1705,
+      "avg_char_per_line": 58.7,
+      "question_ratio": 0.254,
+      "exclamation_ratio": 0.165
+    },
+    "distinctive_language": {
+      "distinctive_words": {
+        "battle": 72.54,
+        "belsnickel": 72.54,
+        "sensei.": 39.57,
+        "transfer!": 39.57,
+        "dum,": 39.57,
+        "dutch": 39.57,
+        "isabel.": 39.57,
+        "hay": 32.97,
+        "che,": 32.97,
+        "sensei": 32.97,
+        "sheriff's": 19.78,
+        "ceremonial": 19.78,
+        "knights": 19.78,
+        "monkey.": 17.59,
+        "mose.": 17.15,
+        "schrute.": 16.49,
+        "schrutes": 16.49,
+        "mose": 13.92,
+        "temp!": 13.19,
+        "goat": 13.19,
+        "begin": 13.19,
+        "mose,": 13.19,
+        "zero,": 13.19,
+        "retail": 13.19,
+        "horse": 12.25,
+        "advantage": 11.54,
+        "beet": 11.54,
+        "tractor": 11.54,
+        "downsizing?": 10.99,
+        "superior": 10.99
+      },
+      "repeated_phrases": {
+        "in the": 384,
+        "of the": 318,
+        "this is": 308,
+        "i have": 302,
+        "do you": 284,
+        "i don't": 258,
+        "are you": 238,
+        "going to": 238,
+        "to the": 236,
+        "i am": 234,
+        "you know": 224,
+        "is a": 220,
+        "to be": 208,
+        "and i": 204,
+        "you have": 188
+      },
+      "catchphrases": {
+        "no.": 51,
+        "what?": 48,
+        "yes.": 39,
+        "yeah.": 27,
+        "okay.": 22,
+        "thank you.": 21,
+        "yes!": 20,
+        "yeah!": 19,
+        "really?": 14,
+        "no!": 13,
+        "oh.": 11,
+        "hello.": 9,
+        "michael.": 8,
+        "what are you doing?": 8,
+        "ok.": 8
+      }
+    },
+    "relationships": {
+      "scenes_together": {
+        "Michael": 665,
+        "Jim": 644,
+        "Pam": 368,
+        "Andy": 311,
+        "Angela": 271,
+        "Phyllis": 219,
+        "Oscar": 190,
+        "Kevin": 188,
+        "Stanley": 160,
+        "Erin": 139
+      },
+      "most_responds_to_me": {
+        "Michael": 1536,
+        "Jim": 1115,
+        "Andy": 390,
+        "Pam": 335,
+        "Angela": 321,
+        "Ryan": 136,
+        "Erin": 125
+      },
+      "i_most_respond_to": {
+        "Michael": 1557,
+        "Jim": 1149,
+        "Andy": 418,
+        "Pam": 336,
+        "Angela": 309,
+        "Ryan": 132,
+        "Phyllis": 120
+      }
+    },
+    "tone_indicators": {
+      "scientific_technical": 0.0,
+      "management_speak": 0.005,
+      "authority_rank": 0.013,
+      "survival_outdoors": 0.029,
+      "sales_business": 0.022,
+      "sarcasm_markers": 0.049,
+      "affection": 0.013,
+      "insults_put_downs": 0.013,
+      "uncertainty": 0.026,
+      "formal_language": 0.001,
+      "pop_culture": 0.002,
+      "self_reference": 0.246
+    },
+    "evolution_by_season": {
+      "1": {
+        "lines": 208,
+        "avg_words": 10.0,
+        "question_ratio": 0.303
+      },
+      "2": {
+        "lines": 815,
+        "avg_words": 9.8,
+        "question_ratio": 0.266
+      },
+      "3": {
+        "lines": 809,
+        "avg_words": 9.8,
+        "question_ratio": 0.232
+      },
+      "4": {
+        "lines": 471,
+        "avg_words": 10.4,
+        "question_ratio": 0.219
+      },
+      "5": {
+        "lines": 1027,
+        "avg_words": 10.0,
+        "question_ratio": 0.24
+      },
+      "6": {
+        "lines": 809,
+        "avg_words": 10.9,
+        "question_ratio": 0.247
+      },
+      "7": {
+        "lines": 694,
+        "avg_words": 12.2,
+        "question_ratio": 0.269
+      },
+      "8": {
+        "lines": 897,
+        "avg_words": 12.4,
+        "question_ratio": 0.276
+      },
+      "9": {
+        "lines": 1060,
+        "avg_words": 12.8,
+        "question_ratio": 0.255
+      }
+    },
+    "sample_dialogues": {
+      "longest_monologues": [
+        "What is my perfect crime? I break into Tiffany's at midnight. Do I go for the vault? No, I go for the chandelier. It's priceless. As I'm taking it down, a woman catches me. She tells me to stop. It's her father's business. She's Tiffany. I say no. We make love all night. In the morning the cops come and I escape in one of their uniforms. I tell her to meet me in Mexico but I go to Canada. I don't trust her. Besides, I like the cold. Thirty years later, I get a postcard. I have a son and he's the chief of police. This is where the story gets interesting: I tell Tiffany to meet me in Paris, by the Trocadero. She's been waiting for me all these years; she's never taken another lover. I don't care, I don't show up. I go to Berlin. That's where I stashed the chandelier.",
+        "Although born just minutes from here, he speaks only German. Closed society. So, now, after the readings by all of your sisters, we will arrive at the vows. So, Konrad...  And away we go. This is a little taste of the ceremony, if you will. He's explaining why we're here, what we're doing here, making introductions, blah blah blah... Then he's gonna have Andy repeat a bunch of stuff. He's gonna ask Andy to produce a ring. I have uh, now just uh... just some twine for our purposes, and you will put the ring on her finger. Yadda yadda, then he's going to ask Andy, uh, if he would like to marry Angela. And you will reply, \"I do.\"  And then he's going to ask Angela if she would like to marry Andy, to which you will reply...",
+        "Thank you. Wow, I can't tell you what an honor it is to support this thing... And obviously that amount of money is no concern to me whatsoever. But, I want to ask you something: when did it become all about the money. when did it become about the flower arrangements, and the white wine spritser, hmm? and all the dinner rolls. you people should be ashamed of yourselves! How many courses did we have tonight, two? Three maybe, if you choose the pudding? I mean what waste! these tables tarted up like Victorian whores! lets' remember we are all here for the dog society. He's what's important, whatever his name is. Not any of this. So that is going to be my donation to you. Thank you and good night! ",
+        "Ahem-hem-hem. May I have your attention please? This will only take a moment of your time. Although I love this company more than almost anything in the world, I have decided to step down from my post and spend more time with my family. I do not fear the unknown and I will meet my new challenges head-on and I will succeed. And I will laugh in the faces of those who doubt me. It has been a pleasure working with some of you and I will not forget those of you soon but remember, while today it is me, we all shall fall. In other words, I am quitting. So... .",
+        "Excuse me, people. It has come to my attention, some of you have forgotten, who is in charge here. When Michael is gone... Jim is in charge. When Jim is gone, Andy and I are in charge. When Andy is gone you answer to me. Okay?  Excuse me where do you think you're going? Oh no, no, no. You're not leaving. No! Stanley, do not walk out that door! If you walk out that door, so help me, I will -  He left. Last time I checked, the American workday ends at five pm. You will all stay at your desks until that time. Or, you will suffer the consequences."
+      ],
+      "random_sample": [
+        "I think you have the wrong number, Michael.",
+        "And I'm going to find that person and punish them.",
+        "I'm now going to read out loud your submitted medical conditions. When you hear yours read, please raise your hand to indicate that it is real. If you do not raise your hand, it will not be covered.",
+        " Have a good trip.",
+        "Hold your breath.",
+        " Ooh.",
+        "You took something that doesn't belong to you.",
+        "I would like to invite you all to my black belt ceremony, right here in the office at lunch, lunch not provided.",
+        "Here, give me that. You have to break the interior bag. ",
+        "Okay, I'm gonna need you to print it out."
+      ]
+    }
+  }
+}

@@ -2,12 +2,13 @@ import { useRef, type KeyboardEvent } from 'react'
 
 interface InputAreaProps {
   onSend: (text: string) => void
+  onStop: () => void
   onClear: () => void
   isStreaming: boolean
   disabled: boolean
 }
 
-export default function InputArea({ onSend, onClear, isStreaming, disabled }: InputAreaProps) {
+export default function InputArea({ onSend, onStop, onClear, isStreaming, disabled }: InputAreaProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const submit = () => {
@@ -72,24 +73,34 @@ export default function InputArea({ onSend, onClear, isStreaming, disabled }: In
         "
       />
 
-      {/* Send */}
-      <button
-        onClick={submit}
-        disabled={busy}
-        title="Send (Enter)"
-        className="
-          w-11 h-11 flex items-center justify-center rounded-xl
-          bg-violet-600 hover:bg-violet-500
-          disabled:opacity-40 disabled:cursor-not-allowed
-          text-white text-lg transition-colors shrink-0
-        "
-      >
-        {isStreaming ? (
-          <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-        ) : (
-          '➤'
-        )}
-      </button>
+      {/* Stop (visible while streaming) / Send (otherwise) */}
+      {isStreaming ? (
+        <button
+          onClick={onStop}
+          title="Stop generating"
+          className="
+            w-11 h-11 flex items-center justify-center rounded-xl
+            bg-red-600 hover:bg-red-500
+            text-white text-base transition-colors shrink-0
+          "
+        >
+          ⏹
+        </button>
+      ) : (
+        <button
+          onClick={submit}
+          disabled={busy}
+          title="Send (Enter)"
+          className="
+            w-11 h-11 flex items-center justify-center rounded-xl
+            bg-violet-600 hover:bg-violet-500
+            disabled:opacity-40 disabled:cursor-not-allowed
+            text-white text-lg transition-colors shrink-0
+          "
+        >
+          ➤
+        </button>
+      )}
 
     </div>
   )

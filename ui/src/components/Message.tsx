@@ -1,3 +1,4 @@
+import ReactMarkdown from 'react-markdown'
 import type { Message as MessageType } from '../types'
 import { CHARACTERS } from '../constants/characters'
 
@@ -49,7 +50,31 @@ export default function Message({ message }: MessageProps) {
             }
           `}
         >
-          {content || (streaming ? '' : <span className="text-slate-500 italic">…</span>)}
+          {isUser ? (
+            // User messages: plain text (no markdown needed)
+            content || (streaming ? '' : <span className="text-slate-500 italic">…</span>)
+          ) : content ? (
+            // Bot messages: render markdown with character-appropriate styling
+            <ReactMarkdown
+              components={{
+                p:      ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+                strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+                em:     ({ children }) => <em className="italic text-slate-300">{children}</em>,
+                code:   ({ children }) => (
+                  <code className="font-mono text-xs bg-black/30 px-1 py-0.5 rounded text-violet-300">
+                    {children}
+                  </code>
+                ),
+                ul: ({ children }) => <ul className="list-disc pl-4 my-1 space-y-0.5">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-4 my-1 space-y-0.5">{children}</ol>,
+                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+              }}
+            >
+              {content}
+            </ReactMarkdown>
+          ) : (
+            streaming ? null : <span className="text-slate-500 italic">…</span>
+          )}
 
           {/* Blinking cursor while streaming */}
           {streaming && (

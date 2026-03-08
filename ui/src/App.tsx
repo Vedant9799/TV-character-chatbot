@@ -16,6 +16,7 @@ export default function App() {
     activeCharacter,
     setCharacter,
     sendMessage,
+    stopStreaming,
     clearChat,
   } = useChat(send, lastMessage, status)
 
@@ -36,6 +37,7 @@ export default function App() {
 
       <InputArea
         onSend={sendMessage}
+        onStop={stopStreaming}
         onClear={clearChat}
         isStreaming={isStreaming}
         disabled={status !== 'connected'}
