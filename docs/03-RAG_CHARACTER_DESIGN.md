@@ -18,7 +18,7 @@ So many scenes are mixed dialogue; "what Michael wants to say" is better represe
 | Choice | What we do | Why |
 |--------|------------|-----|
 | **More few-shot scenes** | Use **8** scenes in the prompt (was 4). | Richer character voice; more examples of how they talk. |
-| **Character line fraction** | At **build** time we store per-scene `character_line_fraction` (e.g. `{"Michael": 0.6, "Jim": 0.3}`). At **retrieval** we slightly boost scenes where the selected character has a higher fraction of the lines. | Ensures we prefer "Michael-heavy" scenes over "Michael is there but mostly others talk". |
+| **Character line fraction** | At **build** time we store per-scene `character_line_fraction` (e.g. `{"Michael": 0.6, "Jim": 0.3}`) in `build_chromadb.py` (see `parse_office_csv` and `parse_bigbang_csv` / `_parse_bigbang_by_scene_id`). At **retrieval** we slightly boost scenes where the selected character has a higher fraction of the lines. | Ensures we prefer "Michael-heavy" scenes over "Michael is there but mostly others talk". |
 | **MMR** | Maximal Marginal Relevance over the (optionally boosted) candidates. | Balances relevance and diversity so we don't get 8 nearly identical scenes. |
 | **Larger candidate pool** | Fetch 60 candidates from Chroma, then filter/dedup and select 8. | Enough headroom after character filter and dedup. |
 

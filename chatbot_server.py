@@ -223,7 +223,7 @@ def _format_rag_as_fewshot(scene_block: str, character: str) -> str:
         return ""
     lines = [f"\n\nHere are example dialogues showing how {character} speaks and responds:"]
     for i, scene in enumerate(scenes, 1):
-        lines.append(f"\nExample {i}:")
+        lines.append(f"\nExample {i}:\n")
         lines.append(scene)
     lines.append(
         f"\n\nNow respond to the user as {character} would, in the same style as the examples above. "

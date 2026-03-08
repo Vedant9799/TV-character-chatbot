@@ -88,16 +88,19 @@ def main() -> None:
             )
             retrieved_ids = [doc_id for doc_id, _ in pairs]
 
-            results[strategy]["recall@1"].append(recall_at_k(retrieved_ids, relevant_ids, 1))
-            results[strategy]["recall@4"].append(recall_at_k(retrieved_ids, relevant_ids, args.n_results))
-            results[strategy]["mrr"].append(mrr(retrieved_ids, relevant_ids))
+            # Only append metrics for judged queries (non-empty relevant_ids) so aggregates are interpretable
+            if relevant_ids:
+                results[strategy]["recall@1"].append(recall_at_k(retrieved_ids, relevant_ids, 1))
+                results[strategy]["recall@4"].append(recall_at_k(retrieved_ids, relevant_ids, 4))
+                results[strategy]["mrr"].append(mrr(retrieved_ids, relevant_ids))
 
     # Aggregate and print
     def mean(xs: list[float]) -> float:
         return sum(xs) / len(xs) if xs else 0.0
 
+    n_judged = sum(1 for item in eval_data if item.get("relevant_ids"))
     print("--- Retrieval comparison (eval_set.json) ---")
-    print(f"  Examples: {len(eval_data)}  |  n_results: {args.n_results}\n")
+    print(f"  Queries: {len(eval_data)} (judged: {n_judged})  |  n_results: {args.n_results}\n")
     print("| Strategy | Recall@1 | Recall@4 | MRR    |")
     print("|----------|----------|----------|--------|")
     for strategy in strategies:

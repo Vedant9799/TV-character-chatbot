@@ -175,11 +175,14 @@ def retrieve(
     show = SHOW_MAP.get(character, "")
     chroma_show = CHROMA_SHOW_KEY.get(show, "")
 
-    where = {"show": {"$eq": chroma_show}} if chroma_show else None
+    where = {"show": chroma_show} if chroma_show else None
+    include_fields = ["documents", "metadatas", "distances"]
+    if strategy in ("mmr", "hybrid"):
+        include_fields.append("embeddings")
     kwargs: dict = dict(
         query_texts=[query_with_context],
         n_results=CANDIDATE_POOL,
-        include=["documents", "metadatas", "distances", "embeddings"],
+        include=include_fields,
     )
     if where:
         kwargs["where"] = where
@@ -209,7 +212,7 @@ def retrieve(
     raw_docs = results["documents"][0]
     raw_metas = results["metadatas"][0]
     raw_distances = results["distances"][0]
-    raw_embeddings = results["embeddings"][0]
+    raw_embeddings = results["embeddings"][0] if "embeddings" in results else [[]] * len(raw_ids)
 
     # Hybrid: merge Chroma + BM25 via RRF, then fetch fused docs from Chroma
     if strategy == "hybrid" and chroma_show:
@@ -269,7 +272,8 @@ def retrieve(
         if key in seen:
             continue
         seen.add(key)
-        # Boost relevance for scenes where this character has more lines (better voice examples)
+        # Boost relevance for scenes where this character has more lines (better voice examples).
+        # character_line_fraction is populated by build_chromadb.py at ingestion time.
         line_frac = json.loads(meta.get("character_line_fraction", "{}"))
         frac = float(line_frac.get(character, 0.5))
         adjusted_dist = dist * (1.0 - 0.25 * frac)  # higher frac => lower dist => ranked higher
