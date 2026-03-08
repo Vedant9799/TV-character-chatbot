@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""WebSocket chatbot server — SmolLM2 1.7B Instruct + ChromaDB RAG.
+"""WebSocket chatbot server — Qwen2.5-7B-Instruct + ChromaDB RAG.
 
 Usage:
     # Base model + RAG (no fine-tuning required, no HF token needed)
     python chatbot_server.py
+
+    # Use Hugging Face Inference API (no local model download; requires HF_TOKEN in .env)
+    python chatbot_server.py --use-inference-api
 
     # Fine-tuned LoRA adapters + RAG
     python chatbot_server.py --adapter-path ./finetuned_model
@@ -26,7 +29,6 @@ from threading import Thread
 from typing import Dict, List, Optional
 
 import chromadb
-import numpy as np
 import torch
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -47,12 +49,14 @@ CHARACTER_DESCRIPTIONS: Dict[str, str] = {
         "You are Michael Scott, the Regional Manager of Dunder Mifflin Scranton. "
         "You are enthusiastic, cringe-worthy, and desperately want to be liked. "
         "You believe you are everyone's best friend and the world's greatest boss. "
-        "You often say 'That's what she said' and reference movies inappropriately."
+        "You often say 'That's what she said' and reference movies inappropriately. "
+        "You often deflect serious topics with inappropriate humor."
     ),
     "Dwight": (
         "You are Dwight Schrute, Assistant (to the) Regional Manager at Dunder Mifflin. "
         "You are intensely loyal, own a beet farm, are a volunteer sheriff's deputy. "
-        "You take everything with extreme seriousness and believe you are destined for greatness."
+        "You take everything with extreme seriousness and believe you are destined for greatness. "
+        "You mention bears, beets, and Battlestar Galactica."
     ),
     "Jim": (
         "You are Jim Halpert, a salesman at Dunder Mifflin Scranton. "
@@ -83,7 +87,8 @@ CHARACTER_DESCRIPTIONS: Dict[str, str] = {
     "Sheldon": (
         "You are Sheldon Cooper, a theoretical physicist at Caltech with an IQ of 187. "
         "You lack social awareness, follow rigid routines, have a spot on the couch, "
-        "and say 'Bazinga!' when joking. You believe you are intellectually superior to everyone."
+        "and say 'Bazinga!' when joking. You believe you are intellectually superior to everyone. "
+        "You are condescending when explaining things, often saying 'As I explained to Penny' or 'It's quite simple, really.'"
     ),
     "Leonard": (
         "You are Leonard Hofstadter, an experimental physicist at Caltech. "
@@ -135,6 +140,10 @@ CHROMA_SHOW_KEY: Dict[str, str] = {
 model: Optional[AutoModelForCausalLM] = None
 tokenizer: Optional[AutoTokenizer] = None
 chroma_col = None
+use_inference_api: bool = False
+retrieval_strategy: str = "mmr"
+retrieval_debug: bool = False
+hf_inference_model_id: str = "Qwen/Qwen2.5-7B-Instruct"
 
 # ---------------------------------------------------------------------------
 # Model loading
@@ -204,125 +213,44 @@ def load_model(model_id: str, adapter_path: Optional[str], load_in_4bit: bool = 
     print("Model ready.\n")
 
 # ---------------------------------------------------------------------------
-# RAG helpers
+# RAG — formatting and retrieval (retrieval logic in retrieval.py)
 # ---------------------------------------------------------------------------
 
-def _cosine_sim(a: List[float], b: List[float]) -> float:
-    """Cosine similarity between two embedding vectors."""
-    a_arr = np.array(a, dtype=np.float32)
-    b_arr = np.array(b, dtype=np.float32)
-    denom = float(np.linalg.norm(a_arr) * np.linalg.norm(b_arr))
-    return float(np.dot(a_arr, b_arr) / denom) if denom > 0 else 0.0
-
-
-def _mmr_select(
-    docs: List[str],
-    distances: List[float],
-    embeddings: List[List[float]],
-    n_select: int,
-    lambda_mult: float = 0.6,
-) -> List[str]:
-    """Maximal Marginal Relevance selection.
-
-    Picks n_select items that balance:
-      - Relevance  (low distance to query)
-      - Diversity  (low cosine similarity to already-selected items)
-
-    lambda_mult=1.0 → pure relevance, 0.0 → pure diversity.
-    """
-    if len(docs) <= n_select:
-        return docs
-
-    # Normalise distances to [0, 1] so they're on the same scale as cosine sim
-    max_d = max(distances) or 1.0
-    norm_dists = [d / max_d for d in distances]
-
-    selected: List[int] = [0]          # always start with the most relevant doc
-    remaining: List[int] = list(range(1, len(docs)))
-
-    while len(selected) < n_select and remaining:
-        scores = []
-        for idx in remaining:
-            relevance  = 1.0 - norm_dists[idx]
-            redundancy = max(_cosine_sim(embeddings[idx], embeddings[s]) for s in selected)
-            scores.append((lambda_mult * relevance - (1 - lambda_mult) * redundancy, idx))
-        best = max(scores, key=lambda x: x[0])[1]
-        selected.append(best)
-        remaining.remove(best)
-
-    return [docs[i] for i in selected]
-
-
-# ---------------------------------------------------------------------------
-# RAG — main retrieval function
-# ---------------------------------------------------------------------------
-
-def retrieve_scene_examples(character: str, query: str, n_results: int = 4) -> str:
-    """Improved RAG pipeline:
-
-    1. Filter ChromaDB by show at the DB level (metadata $eq — the only safe operator)
-    2. Fetch top CANDIDATE_POOL results with embeddings
-    3. Python post-filter: keep only scenes where character appears in characters_present
-    4. Deduplicate by (season, episode, scene)
-    5. MMR-select top n_results balancing relevance and diversity
-
-    Note: ChromaDB's $contains operator works on document text (where_document), NOT on
-    metadata string fields — so character filtering must stay in Python.
-    """
-    CANDIDATE_POOL = 40   # larger pool to survive the Python character post-filter
-
-    show        = SHOW_MAP.get(character, "")
-    chroma_show = CHROMA_SHOW_KEY.get(show, "")
-
-    # ── Step 1: DB-level filter — show only ─────────────────────────────────
-    where = {"show": {"$eq": chroma_show}} if chroma_show else None
-
-    kwargs: dict = dict(
-        query_texts=[query],
-        n_results=CANDIDATE_POOL,
-        include=["documents", "metadatas", "distances", "embeddings"],
-    )
-    if where:
-        kwargs["where"] = where
-
-    try:
-        results = chroma_col.query(**kwargs)
-    except Exception as exc:
-        print(f"[RAG] ChromaDB query error: {exc}")
+def _format_rag_as_fewshot(scene_block: str, character: str) -> str:
+    """Format retrieved scenes as explicit few-shot examples for the model."""
+    scenes = [s.strip() for s in scene_block.split("\n\n---\n\n") if s.strip()]
+    if not scenes:
         return ""
+    lines = [f"\n\nHere are example dialogues showing how {character} speaks and responds:"]
+    for i, scene in enumerate(scenes, 1):
+        lines.append(f"\nExample {i}:")
+        lines.append(scene)
+    lines.append(
+        f"\n\nNow respond to the user as {character} would, in the same style as the examples above. "
+        "Stay strictly in character. Use the examples as your primary guide. "
+        "The show is set in 2005–2013; avoid references to real people or events from outside that era unless the examples include them."
+    )
+    return "".join(lines)
 
-    raw_docs       = results["documents"][0]
-    raw_metas      = results["metadatas"][0]
-    raw_distances  = results["distances"][0]
-    raw_embeddings = results["embeddings"][0]
 
-    # ── Steps 2+3: Python character filter + dedup by (season, episode, scene)
-    seen: set = set()
-    docs, dists, embs = [], [], []
-    for doc, meta, dist, emb in zip(raw_docs, raw_metas, raw_distances, raw_embeddings):
-        # Character filter — characters_present is a JSON string e.g. '["Sheldon","Leonard"]'
-        chars = json.loads(meta.get("characters_present", "[]"))
-        if character and character not in chars:
-            continue
-        # Dedup
-        key = (meta.get("season"), meta.get("episode"), meta.get("scene"))
-        if key in seen:
-            continue
-        seen.add(key)
-        print(doc)
-        docs.append(doc)
-        dists.append(dist)
-        embs.append(emb)
+def retrieve_scene_examples(
+    character: str,
+    query: str,
+    history: List[Dict],
+    n_results: int = 8,
+) -> str:
+    """RAG retrieval via shared retrieval module (MMR strategy). More scenes = richer character voice in the prompt."""
+    from retrieval import retrieve as retrieval_retrieve
 
-    if not docs:
+    pairs = retrieval_retrieve(
+        chroma_col, character, query, history, n_results=n_results, strategy=retrieval_strategy, debug=retrieval_debug
+    )
+    if not pairs:
         print(f"[RAG] No scenes found for character='{character}'")
         return ""
-
-    # ── Step 4: MMR diversity selection ─────────────────────────────────────
-    selected = _mmr_select(docs, dists, embs, n_select=n_results)
-
-    print(f"[RAG] {character}: pool={len(raw_docs)} → char+deduped={len(docs)} → MMR={len(selected)}")
-    return "\n\n---\n\n".join(selected)
+    texts = [text for _, text in pairs]
+    print(f"[RAG] {character}: retrieved {len(texts)} scenes ({retrieval_strategy})")
+    return "\n\n---\n\n".join(texts)
 
 # ---------------------------------------------------------------------------
 # Generation
@@ -346,6 +274,41 @@ def _run_generation(
     )
 
 
+async def _stream_reply_via_inference_api(
+    ws: WebSocket,
+    messages: List[Dict],
+) -> str:
+    """Stream reply using Hugging Face Inference API (no local model)."""
+    from huggingface_hub import AsyncInferenceClient
+
+    token = os.environ.get("HF_TOKEN")
+    if not token:
+        raise RuntimeError("HF_TOKEN is not set. Add it to .env or set the environment variable.")
+
+    client = AsyncInferenceClient(token=token)
+    full_response = ""
+
+    stream = await client.chat.completions.create(
+        model=hf_inference_model_id,
+        messages=messages,
+        stream=True,
+        max_tokens=300,
+        temperature=0.8,
+        top_p=0.9,
+    )
+
+    async for chunk in stream:
+        if chunk.choices and len(chunk.choices) > 0:
+            delta = chunk.choices[0].delta
+            if delta and getattr(delta, "content", None):
+                content = delta.content
+                full_response += content
+                await ws.send_text(json.dumps({"type": "token", "content": content}))
+
+    await ws.send_text(json.dumps({"type": "done"}))
+    return full_response
+
+
 async def stream_reply(
     ws: WebSocket,
     character: str,
@@ -356,14 +319,9 @@ async def stream_reply(
     show = SHOW_MAP.get(character, "a TV show")
     desc = CHARACTER_DESCRIPTIONS.get(character, f"You are {character}.")
 
-    # RAG context
-    scene_block = await asyncio.to_thread(retrieve_scene_examples, character, user_msg)
-    rag_section = (
-        f"\n\nHere are some example scenes featuring {character} to help you stay in character:\n"
-        f"{scene_block}"
-        if scene_block
-        else ""
-    )
+    # RAG context — formatted as explicit few-shot examples
+    scene_block = await asyncio.to_thread(retrieve_scene_examples, character, user_msg, history)
+    rag_section = _format_rag_as_fewshot(scene_block, character) if scene_block else ""
 
     system = (
         f"{desc} Stay fully in character as {character} from {show}. "
@@ -374,6 +332,10 @@ async def stream_reply(
     messages.extend(history)
     messages.append({"role": "user", "content": user_msg})
 
+    if use_inference_api:
+        return await _stream_reply_via_inference_api(ws, messages)
+
+    # Local model path
     # apply_chat_template returns a BatchEncoding (dict-like) for Qwen2.5,
     # not a raw tensor — so we must use return_dict=True and extract explicitly.
     tokenized = tokenizer.apply_chat_template(
@@ -476,10 +438,13 @@ async def websocket_endpoint(ws: WebSocket):
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    from dotenv import load_dotenv
+    load_dotenv()
+
     parser = argparse.ArgumentParser(description="TV Character Chatbot Server")
     parser.add_argument(
-        "--model-id", default="HuggingFaceTB/SmolLM2-1.7B-Instruct",
-        help="HuggingFace model ID (default: HuggingFaceTB/SmolLM2-1.7B-Instruct)"
+        "--model-id", default="Qwen/Qwen2.5-7B-Instruct",
+        help="HuggingFace model ID (default: Qwen/Qwen2.5-7B-Instruct)"
     )
     parser.add_argument(
         "--adapter-path", default="./finetuned_model",
@@ -493,15 +458,44 @@ def main() -> None:
         "--load-in-4bit", action="store_true",
         help="Load model in 4-bit NF4 quantisation for faster inference (CUDA only)",
     )
+    parser.add_argument(
+        "--use-inference-api", action="store_true",
+        help="Use Hugging Face Inference API instead of loading model locally (requires HF_TOKEN in .env)",
+    )
+    parser.add_argument(
+        "--retrieval-strategy", choices=["topk", "mmr", "hybrid"], default="mmr",
+        help="Retrieval strategy: topk, mmr (default), or hybrid (BM25 + Chroma + RRF)",
+    )
+    parser.add_argument(
+        "--retrieval-debug", action="store_true",
+        help="Log retrieval input, output, scoring, and candidates to retrieval_debug.log (agentic feedback)",
+    )
     args = parser.parse_args()
 
-    global chroma_col
+    global chroma_col, use_inference_api, hf_inference_model_id, retrieval_strategy, retrieval_debug
     print(f"Connecting to ChromaDB at {args.persist_dir}...")
     chroma_client = chromadb.PersistentClient(path=args.persist_dir)
     chroma_col = chroma_client.get_collection(args.collection)
-    print(f"  Collection '{args.collection}': {chroma_col.count()} docs\n")
+    print(f"  Collection '{args.collection}': {chroma_col.count()} docs")
+    retrieval_strategy = args.retrieval_strategy
+    retrieval_debug = args.retrieval_debug
+    print(f"  Retrieval strategy: {retrieval_strategy}")
+    if retrieval_debug:
+        try:
+            from retrieval_logger import get_log_path
+            print(f"  Retrieval debug: ON (logs → {get_log_path().resolve()})")
+        except ImportError:
+            print(f"  Retrieval debug: ON (retrieval_logger not found; logs may not be captured)")
+    print()
 
-    load_model(args.model_id, args.adapter_path, args.load_in_4bit)
+    if args.use_inference_api:
+        use_inference_api = True
+        hf_inference_model_id = args.model_id
+        if not os.environ.get("HF_TOKEN"):
+            raise SystemExit("--use-inference-api requires HF_TOKEN. Add it to .env or set the environment variable.")
+        print(f"Using Hugging Face Inference API (model: {hf_inference_model_id}). No local model loaded.\n")
+    else:
+        load_model(args.model_id, args.adapter_path, args.load_in_4bit)
 
     print(f"Starting server at http://{args.host}:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port)

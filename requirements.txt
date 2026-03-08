@@ -6,8 +6,14 @@ trl>=0.8.0
 bitsandbytes>=0.43.0
 accelerate>=0.28.0
 datasets>=2.18.0
+# ── Embeddings (build_chromadb) ───────────────────────────────
+sentence-transformers>=2.2.0
+# ── Hybrid search (BM25 + RRF) ─────────────────────────────────
+rank_bm25>=0.2.2
 # ── Chatbot server ─────────────────────────────────────────────
 fastapi>=0.110.0
+python-dotenv>=1.0.0
+huggingface_hub>=0.20.0
 # ── Already present (pinned by existing lockfile) ─────────────
 annotated-doc==0.0.4
 annotated-types==0.7.0

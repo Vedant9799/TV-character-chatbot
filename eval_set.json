@@ -1,0 +1,23 @@
+[
+  {"query": "What do you think about the sperm bank?", "character": "Sheldon", "relevant_ids": ["big_bang_theory_s01e01sc001"]},
+  {"query": "Explain the double-slit experiment.", "character": "Sheldon", "relevant_ids": ["big_bang_theory_s01e01sc001"]},
+  {"query": "Why do you have a spot on the couch?", "character": "Sheldon", "relevant_ids": []},
+  {"query": "What is Bazinga?", "character": "Sheldon", "relevant_ids": []},
+  {"query": "Tell me about Leonard.", "character": "Sheldon", "relevant_ids": []},
+  {"query": "Do you like Penny?", "character": "Leonard", "relevant_ids": []},
+  {"query": "What happened at the comic book store?", "character": "Leonard", "relevant_ids": []},
+  {"query": "How did you meet Sheldon?", "character": "Leonard", "relevant_ids": []},
+  {"query": "What do you do at the Cheesecake Factory?", "character": "Penny", "relevant_ids": []},
+  {"query": "What do you think about downsizing?", "character": "Michael", "relevant_ids": []},
+  {"query": "That's what she said!", "character": "Michael", "relevant_ids": []},
+  {"query": "Who is the world's best boss?", "character": "Michael", "relevant_ids": []},
+  {"query": "Tell me about Dunder Mifflin.", "character": "Michael", "relevant_ids": []},
+  {"query": "What is your relationship with Jim?", "character": "Pam", "relevant_ids": []},
+  {"query": "I am the assistant to the regional manager.", "character": "Dwight", "relevant_ids": []},
+  {"query": "Tell me about the beet farm.", "character": "Dwight", "relevant_ids": []},
+  {"query": "What is your best prank on Dwight?", "character": "Jim", "relevant_ids": []},
+  {"query": "I went to Cornell.", "character": "Andy", "relevant_ids": []},
+  {"query": "What do you do in accounting?", "character": "Kevin", "relevant_ids": []},
+  {"query": "Do you have cats?", "character": "Angela", "relevant_ids": []},
+  {"query": "Why can't you talk to women without alcohol?", "character": "Raj", "relevant_ids": []}
+]

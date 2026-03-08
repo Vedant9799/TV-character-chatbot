@@ -208,4 +208,15 @@ __marimo__/
 
 *.csv
 /chroma_db
+data/
 ui/node_modules
+
+# Project context and course materials (local)
+context.md
+Lecture 10 - GenAI1 - Some Project Ideas.pdf
+
+# Retrieval debug log (also covered by *.log; explicit for clarity)
+retrieval_debug.log
+
+# Local-only context in docs (do not commit)
+docs/local/
