@@ -2,21 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Ensure the full viewport is dark — prevents white bars beside the centred chat column */
 @layer base {
   html, body, #root {
-    background-color: #1a264b;
     height: 100%;
     margin: 0;
     padding: 0;
   }
 }
 
-/* Custom scrollbar — avoids needing a Tailwind plugin */
+/* Custom scrollbar */
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: #334155 transparent;
+    scrollbar-color: #d1c4e9 transparent;
   }
   .scrollbar-thin::-webkit-scrollbar {
     width: 4px;
@@ -25,7 +23,7 @@
     background: transparent;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #334155;
+    background: #d1c4e9;
     border-radius: 2px;
   }
 }

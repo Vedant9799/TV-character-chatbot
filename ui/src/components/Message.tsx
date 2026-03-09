@@ -8,18 +8,18 @@ interface MessageProps {
 export default function Message({ message }: MessageProps) {
   const { role, content, streaming, character } = message
 
-  // System / info messages (character switch notices, etc.)
   if (role === 'system') {
     return (
-      <div className="text-center text-xs text-slate-600 py-1 select-none animate-fadeIn">
+      <div className="text-center text-xs text-gray-400 py-1 select-none animate-fadeIn">
         {content}
       </div>
     )
   }
 
-  const isUser  = role === 'user'
-  const emoji   = isUser ? '🧑' : (CHARACTERS[character ?? '']?.emoji ?? '🎬')
-  const name    = isUser ? 'You' : character
+  const isUser = role === 'user'
+  const meta   = CHARACTERS[character ?? '']
+  const initial = isUser ? 'Y' : (meta?.fullName ?? character ?? 'U').charAt(0)
+  const color   = isUser ? 'bg-rose-400' : (meta?.color ?? 'bg-gray-400')
 
   return (
     <div
@@ -29,31 +29,25 @@ export default function Message({ message }: MessageProps) {
       `}
     >
       {/* Avatar */}
-      <div className="
-        w-8 h-8 rounded-full flex items-center justify-center text-base
-        bg-app-surface2 border border-app-border shrink-0 self-end select-none
-      ">
-        {emoji}
+      <div className={`w-8 h-8 rounded-full ${color} flex items-center justify-center text-white text-xs font-bold shrink-0 self-end select-none`}>
+        {initial}
       </div>
 
       {/* Bubble */}
       <div className={`flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'}`}>
-        <span className="text-[11px] text-slate-500 px-1">{name}</span>
-
         <div
           className={`
             px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed break-words
             ${isUser
-              ? 'bg-violet-600 text-white rounded-br-sm'
-              : 'bg-app-surface2 text-slate-100 rounded-bl-sm border border-app-border'
+              ? 'bg-rose-500 text-white rounded-br-sm'
+              : 'bg-white/90 text-gray-800 rounded-bl-sm border border-gray-200 shadow-sm'
             }
           `}
         >
-          {content || (streaming ? '' : <span className="text-slate-500 italic">…</span>)}
+          {content || (streaming ? '' : <span className="text-gray-400 italic">…</span>)}
 
-          {/* Blinking cursor while streaming */}
           {streaming && (
-            <span className="inline-block w-[2px] h-[1.1em] bg-violet-400 ml-0.5 align-middle animate-blink" />
+            <span className="inline-block w-[2px] h-[1.1em] bg-rose-400 ml-0.5 align-middle animate-blink" />
           )}
         </div>
       </div>

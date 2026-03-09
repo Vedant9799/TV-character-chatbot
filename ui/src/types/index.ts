@@ -13,8 +13,10 @@ export interface Message {
 export type CharacterShow = 'The Big Bang Theory' | 'The Office'
 
 export interface CharacterMeta {
-  emoji: string
   show: CharacterShow
+  fullName: string
+  role: string
+  color: string        // Tailwind bg class for avatar circle
 }
 
 // Discriminated union of all server → client WebSocket message types
