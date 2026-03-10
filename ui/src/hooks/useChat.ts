@@ -14,7 +14,7 @@ interface UseChatReturn {
 
 export function useChat(
   send: (payload: object) => void,
-  lastMessage: MessageEvent | null,
+  onMessageRef: React.MutableRefObject<((evt: MessageEvent) => void) | null>,
   status: ConnectionStatus,
   initialCharacter: string = DEFAULT_CHARACTER,
 ): UseChatReturn {
@@ -58,45 +58,48 @@ export function useChat(
     flushBuffer(targetId)
   }, [flushBuffer])
 
-  // ── Handle incoming server messages ──────────────────────────────────────
+  // ── Handle incoming server messages via ref callback ───────────────────────
+  // This runs directly inside ws.onmessage — no React state in the hot path,
+  // so rapid token messages are never lost to React 18 batching.
   useEffect(() => {
-    if (!lastMessage) return
+    onMessageRef.current = (evt: MessageEvent) => {
+      const data = JSON.parse(evt.data as string) as WSServerMessage
 
-    const data = JSON.parse(lastMessage.data as string) as WSServerMessage
+      switch (data.type) {
+        case 'token': {
+          const id = streamingId.current
+          if (!id) break
+          tokenBuffer.current += data.content   // accumulate in ref (no re-render)
+          scheduleFlush(id)                     // one RAF per frame, not one per token
+          break
+        }
 
-    switch (data.type) {
-      case 'token': {
-        const id = streamingId.current
-        if (!id) break
-        tokenBuffer.current += data.content   // accumulate in ref (no re-render)
-        scheduleFlush(id)                     // one RAF per frame, not one per token
-        break
+        case 'done': {
+          const id = streamingId.current
+          if (id) flushNow(id)                  // drain any remaining buffered tokens
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === id ? { ...m, streaming: false } : m,
+            ),
+          )
+          streamingId.current = null
+          setIsStreaming(false)
+          break
+        }
+
+        case 'error':
+          tokenBuffer.current = ''
+          if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null }
+          setIsStreaming(false)
+          streamingId.current = null
+          break
+
+        case 'character_set':
+          break
       }
-
-      case 'done': {
-        const id = streamingId.current
-        if (id) flushNow(id)                  // drain any remaining buffered tokens
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === id ? { ...m, streaming: false } : m,
-          ),
-        )
-        streamingId.current = null
-        setIsStreaming(false)
-        break
-      }
-
-      case 'error':
-        tokenBuffer.current = ''
-        if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null }
-        setIsStreaming(false)
-        streamingId.current = null
-        break
-
-      case 'character_set':
-        break
     }
-  }, [lastMessage, scheduleFlush, flushNow])
+    return () => { onMessageRef.current = null }
+  }, [onMessageRef, scheduleFlush, flushNow])
 
   // ── Send initial character selection when (re)connected ─────────────────
   useEffect(() => {
@@ -153,14 +156,11 @@ export function useChat(
   )
 
   // ── Stop streaming mid-reply ─────────────────────────────────────────────
-  // Client-side only: freeze the current bot message as-is and mark it done.
-  // The server's Ollama thread keeps running but tokens arrive to a null
-  // streamingId and are silently discarded by the token handler.
   const stopStreaming = useCallback(() => {
     const id = streamingId.current
     if (!id) return
     if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null }
-    flushBuffer(id)                              // drain any buffered tokens into state
+    flushBuffer(id)
     setMessages((prev) =>
       prev.map((m) => (m.id === id ? { ...m, streaming: false } : m)),
     )

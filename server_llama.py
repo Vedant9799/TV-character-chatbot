@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-"""WebSocket chatbot server — Groq API + ChromaDB RAG.
+"""WebSocket chatbot server — Groq API (Llama 3) + ChromaDB RAG.
 
 Uses Groq's free OpenAI-compatible API for generation.
 Set GROQ_API_KEY environment variable before running.
 
 Usage:
     export GROQ_API_KEY=gsk_...
-    python server.py
+    python server_llama.py
 
     # Use a different Groq model:
-    python server.py --model llama-3.3-70b-versatile
+    python server_llama.py --model llama-3.1-70b-versatile
 
     # By default the server reads character_profiles.json automatically.
     # Generate it first with:
-    #   python character_profiler.py --characters "Sheldon:The Big Bang Theory,..."
+    #   python character_profiler.py --characters "Character:Show,..."
 
     # Use a custom profiles path:
-    python server.py --profiles /path/to/my_profiles.json
+    python server_llama.py --profiles /path/to/my_profiles.json
 
 The server:
   - Serves the chat UI at http://localhost:8001/
@@ -187,7 +187,7 @@ def load_descriptions_from_file(path: str) -> Dict[str, str]:
 # ---------------------------------------------------------------------------
 
 chroma_col = None
-groq_model:  str = "qwen/qwen3-32b"   # overridden by --model
+groq_model:  str = "llama-3.3-70b-versatile"   # overridden by --model
 groq_client: OpenAI                             # initialised in main()
 
 # ---------------------------------------------------------------------------
@@ -349,15 +349,10 @@ def _groq_stream_thread(
 ) -> None:
     """Runs in a background thread.
 
-    Collects the full Groq response first, strips all <think>…</think>
-    blocks and character-name prefixes via regex on the complete text,
-    then pushes the clean result onto *out_q* word-by-word so the client
+    Collects the full Groq response first, strips any stray formatting
+    and character-name prefixes via regex on the complete text, then
+    pushes the clean result onto *out_q* word-by-word so the client
     still sees a progressive typing effect.
-
-    Previous approach streamed token-by-token with an in-flight state
-    machine, but Qwen3 inserts inline <think> tags mid-word (e.g.
-    ``Schr<think>ute</think>,``) which silently eats characters.
-    Cleaning the full text after generation avoids this entirely.
     """
     try:
         stream = groq_client.chat.completions.create(
@@ -500,9 +495,7 @@ async def stream_reply(
 
     messages = [{"role": "system", "content": system}]
     messages.extend(history)
-    # /no_think suppresses Qwen3's <think> reasoning block for cleaner output.
-    # Added only to the API payload — not stored in history.
-    messages.append({"role": "user", "content": user_msg + " /no_think"})
+    messages.append({"role": "user", "content": user_msg})
 
     # Spin up producer thread; drain tokens via run_in_executor so the event
     # loop stays free while waiting for the next chunk from Groq.
@@ -618,8 +611,8 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="TV Character Chatbot Server (Groq)")
     parser.add_argument(
-        "--model", default="qwen/qwen3-32b",
-        help="Groq model to use (default: qwen/qwen3-32b). "
+        "--model", default="llama-3.3-70b-versatile",
+        help="Groq model to use (default: llama-3.3-70b-versatile). "
              "See https://console.groq.com/docs/models for available models.",
     )
     parser.add_argument(

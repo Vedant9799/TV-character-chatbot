@@ -17,7 +17,7 @@ export default function ChatView({ initialCharacter, onBack }: ChatViewProps) {
   const wsProto     = location.protocol === 'https:' ? 'wss' : 'ws'
   const wsUrl       = `${wsProto}://${backendHost}/ws`
 
-  const { send, status, lastMessage } = useWebSocket(wsUrl)
+  const { send, status, onMessageRef } = useWebSocket(wsUrl)
   const {
     messages,
     isStreaming,
@@ -26,7 +26,7 @@ export default function ChatView({ initialCharacter, onBack }: ChatViewProps) {
     sendMessage,
     stopStreaming,
     clearChat,
-  } = useChat(send, lastMessage, status, initialCharacter)
+  } = useChat(send, onMessageRef, status, initialCharacter)
 
   return (
     <div className="flex flex-col h-dvh max-w-3xl mx-auto">
