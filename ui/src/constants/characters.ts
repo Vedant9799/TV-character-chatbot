@@ -1,26 +1,29 @@
 import type { CharacterMeta, CharacterShow } from '../types'
 
 export const CHARACTERS: Record<string, CharacterMeta> = {
-  // The Big Bang Theory — supported (ChromaDB scenes + profiles built)
-  Sheldon:    { emoji: '🧪', show: 'The Big Bang Theory', supported: true },
-  Leonard:    { emoji: '🔭', show: 'The Big Bang Theory', supported: true },
-  // coming soon
-  Penny:      { emoji: '🥂', show: 'The Big Bang Theory' },
-  Howard:     { emoji: '🚀', show: 'The Big Bang Theory' },
-  Raj:        { emoji: '⭐', show: 'The Big Bang Theory' },
-  Bernadette: { emoji: '🦠', show: 'The Big Bang Theory' },
-  Amy:        { emoji: '🧠', show: 'The Big Bang Theory' },
+  // ── The Big Bang Theory ─────────────────────────────────────────────────
+  Sheldon: {
+    emoji: '🧪', show: 'The Big Bang Theory', supported: true,
+    color: '#3b82f6', description: 'Theoretical physicist · IQ 187',
+    image: '/portraits/sheldon.jpg',
+  },
+  Leonard: {
+    emoji: '🔭', show: 'The Big Bang Theory', supported: true,
+    color: '#f59e0b', description: 'Experimental physicist · Sheldon\'s roommate',
+    image: '/portraits/leonard.jpg',
+  },
 
-  // The Office — supported
-  Michael:    { emoji: '👔', show: 'The Office', supported: true },
-  Dwight:     { emoji: '🌱', show: 'The Office', supported: true },
-  // coming soon
-  Jim:        { emoji: '😏', show: 'The Office' },
-  Pam:        { emoji: '🎨', show: 'The Office' },
-  Andy:       { emoji: '🎵', show: 'The Office' },
-  Ryan:       { emoji: '💼', show: 'The Office' },
-  Kevin:      { emoji: '🍪', show: 'The Office' },
-  Angela:     { emoji: '🐱', show: 'The Office' },
+  // ── The Office ──────────────────────────────────────────────────────────
+  Michael: {
+    emoji: '👔', show: 'The Office', supported: true,
+    color: '#ef4444', description: 'World\'s best boss (self-proclaimed)',
+    image: '/portraits/michael.jpg',
+  },
+  Dwight: {
+    emoji: '🌱', show: 'The Office', supported: true,
+    color: '#d97706', description: 'Assistant to the Regional Manager',
+    image: '/portraits/dwight.jpg',
+  },
 }
 
 export const SHOWS: CharacterShow[] = ['The Big Bang Theory', 'The Office']

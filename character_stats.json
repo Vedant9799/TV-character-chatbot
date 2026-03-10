@@ -113,20 +113,6 @@
         "Stuart": 122
       }
     },
-    "tone_indicators": {
-      "scientific_technical": 0.017,
-      "management_speak": 0.0,
-      "authority_rank": 0.011,
-      "survival_outdoors": 0.008,
-      "sales_business": 0.006,
-      "sarcasm_markers": 0.067,
-      "affection": 0.017,
-      "insults_put_downs": 0.007,
-      "uncertainty": 0.039,
-      "formal_language": 0.004,
-      "pop_culture": 0.017,
-      "self_reference": 0.265
-    },
     "evolution_by_season": {
       "1": {
         "lines": 1132,
@@ -197,7 +183,9 @@
         "He\u2019s not wrong. It was your crackpot idea that he deserves love.",
         "I was going to say sad. I don\u2019t know why I hedged.",
         "\u2013 Because it\u2019s almost eleven o\u2019clock.",
-        "Maybe when I publish it, I\u2019ll include an inhaler."
+        "Maybe when I publish it, I\u2019ll include an inhaler.",
+        "No, not at all. No, I\u2019m fine. You know, Amy had reservations about our relationship, so all worked out for the best.",
+        "Oh. Well, I feel both flattered and hurt. Like when people say I look like that skeleton from Nightmare Before Christmas."
       ]
     }
   },
@@ -315,20 +303,6 @@
         "Bernadette": 96
       }
     },
-    "tone_indicators": {
-      "scientific_technical": 0.009,
-      "management_speak": 0.0,
-      "authority_rank": 0.003,
-      "survival_outdoors": 0.003,
-      "sales_business": 0.004,
-      "sarcasm_markers": 0.06,
-      "affection": 0.013,
-      "insults_put_downs": 0.008,
-      "uncertainty": 0.041,
-      "formal_language": 0.001,
-      "pop_culture": 0.011,
-      "self_reference": 0.139
-    },
     "evolution_by_season": {
       "1": {
         "lines": 1213,
@@ -399,7 +373,9 @@
         "Because it doesn\u2019t matter. I don\u2019t care if we\u2019re a ten or a two.",
         "Maybe we\u2019re not ready to hang out as friends.",
         "Uh, it turns out my grandfather had died.",
-        "He just made that easier."
+        "He just made that easier.",
+        "Yeah. How did you know?",
+        "We\u2019re not living together."
       ]
     }
   },
@@ -517,20 +493,6 @@
         "Andy": 301
       }
     },
-    "tone_indicators": {
-      "scientific_technical": 0.0,
-      "management_speak": 0.005,
-      "authority_rank": 0.007,
-      "survival_outdoors": 0.003,
-      "sales_business": 0.021,
-      "sarcasm_markers": 0.081,
-      "affection": 0.024,
-      "insults_put_downs": 0.01,
-      "uncertainty": 0.052,
-      "formal_language": 0.001,
-      "pop_culture": 0.001,
-      "self_reference": 0.275
-    },
     "evolution_by_season": {
       "1": {
         "lines": 490,
@@ -591,7 +553,9 @@
         "You did?",
         "Thank you Santa. Happy Holidays.",
         "I have my per diem.  I already know what I am going to spend this on. I am going to buy a sweater.",
-        "Hey, Schneider, real quick. What do you call a butt load of lawyers driving off a cliff?"
+        "Hey, Schneider, real quick. What do you call a butt load of lawyers driving off a cliff?",
+        "Terrific. Good.",
+        "I was thinking about our little leak problem. I was up all lunch thinking about what we should do to this individual. You know what I think we should do? We make 'em come to work, and we work 'em, and we make 'em sit next to all the people they screwed over. And, and we pay 'em but we make 'em feel like they did something really wrong. The one question I have is, do we give them a Christmas bonus? I say yes, it's Christmas, but right after they're back in the thick of it."
       ]
     }
   },
@@ -709,20 +673,6 @@
         "Phyllis": 120
       }
     },
-    "tone_indicators": {
-      "scientific_technical": 0.0,
-      "management_speak": 0.005,
-      "authority_rank": 0.013,
-      "survival_outdoors": 0.029,
-      "sales_business": 0.022,
-      "sarcasm_markers": 0.049,
-      "affection": 0.013,
-      "insults_put_downs": 0.013,
-      "uncertainty": 0.026,
-      "formal_language": 0.001,
-      "pop_culture": 0.002,
-      "self_reference": 0.246
-    },
     "evolution_by_season": {
       "1": {
         "lines": 208,
@@ -788,7 +738,9 @@
         "You took something that doesn't belong to you.",
         "I would like to invite you all to my black belt ceremony, right here in the office at lunch, lunch not provided.",
         "Here, give me that. You have to break the interior bag. ",
-        "Okay, I'm gonna need you to print it out."
+        "Okay, I'm gonna need you to print it out.",
+        "Oh, come on. We don't blindly stick to every outmoded aspect of our traditions. Come on, get with the spirit of it, you guys. ",
+        "I'll tell you what happened to me. I didn't see my father for the first two years of my life. I thought my mother was my father, and my wet-nurse was my mother."
       ]
     }
   }

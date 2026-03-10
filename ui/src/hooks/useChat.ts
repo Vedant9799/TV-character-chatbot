@@ -16,10 +16,11 @@ export function useChat(
   send: (payload: object) => void,
   lastMessage: MessageEvent | null,
   status: ConnectionStatus,
+  initialCharacter: string = DEFAULT_CHARACTER,
 ): UseChatReturn {
   const [messages,         setMessages]         = useState<Message[]>([])
   const [isStreaming,      setIsStreaming]       = useState(false)
-  const [activeCharacter,  setActiveCharacter]  = useState(DEFAULT_CHARACTER)
+  const [activeCharacter,  setActiveCharacter]  = useState(initialCharacter)
 
   // Track the id of the bot message currently being streamed
   const streamingId    = useRef<string | null>(null)

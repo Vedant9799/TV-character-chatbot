@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a scene-level ChromaDB collection from TV show dialogue CSV files.
+"""Build a scene-level ChromaDB collection from merged_tv_dialogues.csv.
 
 Expected output document shape:
 {
@@ -27,7 +27,7 @@ import re
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Tuple
 
 import chromadb
 import pandas as pd
@@ -41,7 +41,7 @@ class SceneDoc:
 
 
 # ---------------------------------------------------------------------------
-# Text cleaning helpers  (ported from dialogue_token_analysis.ipynb)
+# Text cleaning helpers
 # ---------------------------------------------------------------------------
 
 def _norm_text(value: object) -> str:
@@ -58,17 +58,20 @@ def _safe_int(value: object) -> int:
 
 
 def _clean_dialogue(text: str) -> str:
-    """Remove CSV noise from a dialogue line (mirrors notebook clean_dialogue)."""
+    """Remove CSV noise from a dialogue line."""
     if not isinstance(text, str):
         return ""
-    text = re.sub(r"[\"']+", "", text)    # stray quotes
+    # Only strip double quotes (CSV artefacts). Single quotes / apostrophes
+    # must be kept — they appear in contractions (don't, it's, I'm) and
+    # possessives (Schrute's). Stripping them produces "Ive", "Thats", etc.
+    text = re.sub(r'"+', "", text)        # stray double quotes only
     text = re.sub(r",{2,}", ",", text)    # collapsed commas
     text = re.sub(r"[ \t]+", " ", text)   # collapsed whitespace
     return text.strip()
 
 
 def _strip_parentheticals(name: str) -> str:
-    """'Sheldon (mouths)' → 'Sheldon',  'Leonard (mouths back)' → 'Leonard'."""
+    """'Sheldon (mouths)' → 'Sheldon'"""
     return re.sub(r"\s*\(.*?\)", "", name).strip()
 
 
@@ -90,8 +93,9 @@ def _build_scene_text(lines: Iterable[Tuple[str, str]]) -> str:
 # Character normalisation maps
 # ---------------------------------------------------------------------------
 
-# Rows to treat as non-dialogue in the BBT CSV
-_BBT_NON_CHARS = {"scene", "stage direction", "all"}
+# Rows to treat as non-dialogue
+_NON_CHARS = {"scene", "stage direction", "stage directions", "all",
+              "narrator", "both", "everyone", "group", "crowd"}
 
 # Canonical name for known aliases / typos in BBT
 _BBT_CHAR_ALIASES: Dict[str, str] = {
@@ -104,35 +108,70 @@ _BBT_CHAR_ALIASES: Dict[str, str] = {
     "Mrs Cooper":        "Mary",
 }
 
-# Canonical name for known aliases / artefacts in The Office CSV
+# Canonical name for known aliases / artefacts in The Office
 _OFFICE_CHAR_ALIASES: Dict[str, str] = {
     "Deangelo":   "DeAngelo",
     "Michael:":   "Michael",
 }
 
 # Main cast per show — used to add has_<name> boolean flags to every doc.
-# These flags enable direct ChromaDB where-clause filtering (no Python post-filter).
+# These flags enable direct ChromaDB where-clause filtering.
 _BBT_MAIN_CHARS:    List[str] = ["Sheldon", "Leonard", "Penny", "Howard", "Raj", "Amy", "Bernadette"]
 _OFFICE_MAIN_CHARS: List[str] = ["Michael", "Dwight", "Jim", "Pam", "Andy", "Ryan", "Kevin", "Angela"]
 
 # Style exemplars — characters whose lines are stored as short voice-sample docs.
-# All four chatbot characters get exemplar docs for the voice-anchoring RAG pass.
-_EXEMPLAR_CHARS        = ["Sheldon", "Leonard", "Michael", "Dwight"]
-_EXEMPLAR_CONTEXT_TURNS = 2      # preceding turns of context per exemplar
-_EXEMPLAR_MIN_WORDS    = 5       # skip very short lines
+_EXEMPLAR_CHARS          = ["Sheldon", "Leonard", "Michael", "Dwight"]
+_EXEMPLAR_CONTEXT_TURNS  = 2    # preceding turns of context per exemplar
+_EXEMPLAR_MIN_WORDS      = 5    # min words for a line with preceding context
+_EXEMPLAR_MIN_WORDS_SOLO = 15   # min words for a standalone monologue (no prior ctx)
+
+# The Office CSV uses a global scene counter — individual "scenes" are tiny
+# beats/shots, not full scenes.  Merge consecutive scenes within an episode
+# until each chunk reaches this many lines so canon docs have useful context.
+_OFFICE_MIN_SCENE_LINES  = 8
 
 
 def _char_flags(chars_in_scene: set, main_chars: List[str]) -> Dict[str, bool]:
-    """Return {has_sheldon: True/False, has_leonard: True/False, ...} for every main char."""
+    """Return {has_sheldon: True/False, ...} for every main char."""
     return {f"has_{c.lower()}": (c in chars_in_scene) for c in main_chars}
 
 
-def _merge_consecutive_lines(lines: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
-    """Merge consecutive utterances by the same speaker into one turn.
+def _chunk_episode_scenes(
+    scene_lines: List[Tuple[int, List[Tuple[str, str]]]],
+    min_lines: int,
+) -> List[Tuple[int, List[Tuple[str, str]]]]:
+    """Merge consecutive (scene_id, lines) pairs until each chunk has ≥ min_lines.
 
-    e.g. three consecutive Sheldon rows → one combined Sheldon utterance.
-    This avoids artificially splitting a single speech act across multiple docs.
+    Used for The Office where individual scene beats are often 1-4 lines.
+    Returns list of (first_scene_id_in_chunk, merged_lines).
+    The last partial chunk is appended to the previous one to avoid
+    orphan stubs; if there's only one chunk it's kept as-is.
     """
+    chunks: List[Tuple[int, List[Tuple[str, str]]]] = []
+    cur_scene = scene_lines[0][0]
+    cur_lines: List[Tuple[str, str]] = []
+
+    for scene_id, lines in scene_lines:
+        if not cur_lines:
+            cur_scene = scene_id
+        cur_lines.extend(lines)
+        if len(cur_lines) >= min_lines:
+            chunks.append((cur_scene, cur_lines))
+            cur_lines = []
+
+    # Flush any remaining lines
+    if cur_lines:
+        if chunks:
+            # Append to last chunk instead of creating a tiny stub
+            chunks[-1] = (chunks[-1][0], chunks[-1][1] + cur_lines)
+        else:
+            chunks.append((cur_scene, cur_lines))
+
+    return chunks
+
+
+def _merge_consecutive_lines(lines: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    """Merge consecutive utterances by the same speaker into one turn."""
     if not lines:
         return []
     merged: List[List] = [[lines[0][0], lines[0][1]]]
@@ -144,192 +183,9 @@ def _merge_consecutive_lines(lines: List[Tuple[str, str]]) -> List[Tuple[str, st
     return [(s, d) for s, d in merged]
 
 
-def parse_office_csv(csv_path: str) -> List[SceneDoc]:
-    df = pd.read_csv(csv_path)
-
-    # Drop trailing unnamed columns (artefact of a trailing comma in the CSV)
-    df = df.loc[:, ~df.columns.str.startswith("Unnamed")]
-
-    required = {"season", "episode", "title", "scene", "speaker", "line"}
-    missing = required - set(df.columns)
-    if missing:
-        raise ValueError(f"Missing required columns in {csv_path}: {sorted(missing)}")
-
-    # ── Cleaning (mirrors dialogue_token_analysis.ipynb §2.2) ────────────────
-    for col in df.select_dtypes("object").columns:
-        df[col] = df[col].str.strip()
-
-    # Normalise speaker names: aliases → canonical, then strip
-    df["speaker"] = (
-        df["speaker"]
-        .map(lambda s: _OFFICE_CHAR_ALIASES.get(s, s) if isinstance(s, str) else s)
-    )
-
-    # Clean dialogue text
-    df["line"] = df["line"].apply(_clean_dialogue)
-
-    # Drop rows with null/empty speakers or blank dialogue
-    df = df.dropna(subset=["speaker", "line"])
-    df = df[(df["speaker"].str.strip() != "") & (df["line"].str.strip() != "")]
-    # ─────────────────────────────────────────────────────────────────────────
-
-    docs: List[SceneDoc] = []
-
-    grouped = df.groupby(["season", "episode", "title", "scene"], sort=True, dropna=False)
-    for (season, episode, title, scene), group in grouped:
-        raw_lines = list(zip(group["speaker"], group["line"]))
-        merged    = _merge_consecutive_lines(raw_lines)
-        text      = _build_scene_text(merged)
-        if not text:
-            continue
-
-        chars_set  = {_norm_text(s) for s in group["speaker"] if _norm_text(s)}
-        characters = sorted(chars_set)
-        season_i   = _safe_int(season)
-        episode_i  = _safe_int(episode)
-        scene_i    = _safe_int(scene)
-
-        docs.append(
-            SceneDoc(
-                doc_id=f"the_office_s{season_i:02d}e{episode_i:02d}sc{scene_i:03d}",
-                text=text,
-                metadata={
-                    "show":               "the_office",
-                    "doc_type":           "canon",
-                    "season":             season_i,
-                    "episode":            episode_i,
-                    "scene":              scene_i,
-                    "characters_present": json.dumps(characters),
-                    "episode_title":      _norm_text(title),
-                    **_char_flags(chars_set, _OFFICE_MAIN_CHARS),
-                },
-            )
-        )
-
-    return docs
-
-
-def parse_bigbang_csv(csv_path: str) -> List[SceneDoc]:
-    """Parse TBBTcleaned.csv which uses an explicit scene_id integer column.
-
-    Column schema: season, episode, character, dialogue, scene_id
-    (No "Scene" marker rows — scene boundaries are pre-encoded as scene_id.)
-    """
-    df = pd.read_csv(csv_path)
-
-    required = {"season", "episode", "character", "dialogue", "scene_id"}
-    missing = required - set(df.columns)
-    if missing:
-        raise ValueError(f"Missing required columns in {csv_path}: {sorted(missing)}")
-
-    # ── Cleaning ─────────────────────────────────────────────────────────────
-    for col in df.select_dtypes("object").columns:
-        df[col] = df[col].str.strip()
-
-    # 1. Strip parenthetical stage-direction suffixes from character names
-    #    e.g. "Sheldon (mouths)" → "Sheldon", "Penny (to Raj)" → "Penny"
-    df["character"] = df["character"].apply(
-        lambda c: _strip_parentheticals(_norm_text(c))
-    )
-
-    # 2. Apply alias map: spelling variants, formal titles, flashback tags
-    df["character"] = df["character"].map(
-        lambda c: _BBT_CHAR_ALIASES.get(c, c)
-    )
-
-    # 3. Clean dialogue text
-    df["dialogue"] = df["dialogue"].apply(_clean_dialogue)
-
-    # 4. Drop non-character rows (Scene markers, Stage Directions, etc.)
-    df = df[~df["character"].str.lower().isin(_BBT_NON_CHARS)]
-
-    # 5. Drop blank dialogue or blank character names
-    df = df[(df["character"].str.strip() != "") & (df["dialogue"].str.strip() != "")]
-    # ─────────────────────────────────────────────────────────────────────────
-
-    docs: List[SceneDoc] = []
-
-    # scene_id already encodes scene boundaries — group directly
-    grouped = df.groupby(["season", "episode", "scene_id"], sort=True)
-    for (season, episode, scene_id), group in grouped:
-        season_i  = _safe_int(season)
-        episode_i = _safe_int(episode)
-        sc_num    = _safe_int(scene_id)
-
-        raw_lines = list(zip(group["character"].tolist(), group["dialogue"].tolist()))
-        merged    = _merge_consecutive_lines(raw_lines)
-        if not merged:
-            continue
-
-        chars_set = {s for s, _ in merged}
-        chars     = sorted(chars_set)
-        text      = _build_scene_text(merged)
-        if not text.strip():
-            continue
-
-        flags = _char_flags(chars_set, _BBT_MAIN_CHARS)
-
-        # ── Canon scene document ─────────────────────────────────────────────
-        docs.append(
-            SceneDoc(
-                doc_id=f"big_bang_theory_s{season_i:02d}e{episode_i:02d}sc{sc_num:03d}",
-                text=text,
-                metadata={
-                    "show":               "big_bang_theory",
-                    "doc_type":           "canon",
-                    "season":             season_i,
-                    "episode":            episode_i,
-                    "scene":              sc_num,
-                    "scene_setting":      "",
-                    "characters_present": json.dumps(chars),
-                    "episode_title":      "",
-                    **flags,
-                },
-            )
-        )
-
-        # ── Style exemplar documents (one per qualifying line per exemplar char) ─
-        # Each exemplar = 1-2 turns of context + the character's reply.
-        # Used in the second retrieval pass to anchor voice without injecting
-        # a full scene's worth of other characters' dialogue.
-        for exemplar_char in _EXEMPLAR_CHARS:
-            if exemplar_char not in chars_set:
-                continue
-            for turn_idx, (speaker, line) in enumerate(merged):
-                if speaker != exemplar_char:
-                    continue
-                if len(line.split()) < _EXEMPLAR_MIN_WORDS:
-                    continue
-                ctx = merged[max(0, turn_idx - _EXEMPLAR_CONTEXT_TURNS):turn_idx]
-                if not ctx:
-                    continue
-                ctx_text      = "\n".join(f"{s}: {d}" for s, d in ctx)
-                exemplar_text = f"{ctx_text}\n{exemplar_char}: {line}"
-                char_slug     = exemplar_char.lower()
-
-                docs.append(
-                    SceneDoc(
-                        doc_id=(
-                            f"bbt_ex_{char_slug}_s{season_i:02d}e{episode_i:02d}"
-                            f"sc{sc_num:03d}_t{turn_idx:04d}"
-                        ),
-                        text=exemplar_text,
-                        metadata={
-                            "show":               "big_bang_theory",
-                            "doc_type":           "exemplar",
-                            "season":             season_i,
-                            "episode":            episode_i,
-                            "scene":              sc_num,
-                            "scene_setting":      "",
-                            "characters_present": json.dumps([exemplar_char]),
-                            "episode_title":      "",
-                            **_char_flags({exemplar_char}, _BBT_MAIN_CHARS),
-                        },
-                    )
-                )
-
-    return docs
-
+# ---------------------------------------------------------------------------
+# Parser — merged CSV only
+# ---------------------------------------------------------------------------
 
 def parse_merged_csv(csv_path: str) -> List[SceneDoc]:
     """Parse merged_tv_dialogues.csv — the unified TBBT + Office CSV.
@@ -377,14 +233,12 @@ def parse_merged_csv(csv_path: str) -> List[SceneDoc]:
     # Clean dialogue text
     df["dialogue"] = df["dialogue"].apply(_clean_dialogue)
 
-    # Drop non-character rows (scene headings, stage directions, etc.)
-    _NON_CHARS = _BBT_NON_CHARS | {"stage directions", "narrator", "both",
-                                    "everyone", "group", "crowd", "all"}
+    # Drop non-character rows and blank entries
     df = df[~df["character"].str.lower().isin(_NON_CHARS)]
     df = df[(df["character"].str.strip() != "") & (df["dialogue"].str.strip() != "")]
     # ──────────────────────────────────────────────────────────────────────────
 
-    # Show → (chroma metadata key, main cast list for has_<char> flags)
+    # Show → chroma metadata config
     _SHOW_CONFIG: Dict[str, Dict] = {
         "The Big Bang Theory": {
             "chroma_key":  "big_bang_theory",
@@ -400,37 +254,28 @@ def parse_merged_csv(csv_path: str) -> List[SceneDoc]:
 
     docs: List[SceneDoc] = []
 
-    grouped = df.groupby(["show", "season", "episode", "scene"], sort=True)
-    for (show, season, episode, scene), group in grouped:
-        cfg = _SHOW_CONFIG.get(show)
-        if cfg is None:
-            continue   # skip unexpected show values
-
-        season_i  = _safe_int(season)
-        episode_i = _safe_int(episode)
-        scene_i   = _safe_int(scene)
-        prefix    = cfg["id_prefix"]
-
-        raw_lines = list(zip(group["character"].tolist(), group["dialogue"].tolist()))
-        merged    = _merge_consecutive_lines(raw_lines)
+    def _emit_docs(
+        cfg: Dict,
+        season_i: int,
+        episode_i: int,
+        scene_i: int,
+        merged: List[Tuple[str, str]],
+    ) -> None:
+        """Emit one canon doc + all qualifying exemplar docs for a scene chunk."""
         if not merged:
-            continue
-
+            return
+        prefix    = cfg["id_prefix"]
         chars_set = {s for s, _ in merged}
         chars     = sorted(chars_set)
         text      = _build_scene_text(merged)
         if not text.strip():
-            continue
-
+            return
         flags = _char_flags(chars_set, cfg["main_chars"])
 
         # ── Canon document ────────────────────────────────────────────────────
         docs.append(
             SceneDoc(
-                doc_id=(
-                    f"{prefix}_s{season_i:02d}e{episode_i:02d}"
-                    f"sc{scene_i:05d}"
-                ),
+                doc_id=f"{prefix}_s{season_i:02d}e{episode_i:02d}sc{scene_i:05d}",
                 text=text,
                 metadata={
                     "show":               cfg["chroma_key"],
@@ -445,22 +290,30 @@ def parse_merged_csv(csv_path: str) -> List[SceneDoc]:
             )
         )
 
-        # ── Style exemplar documents (one per qualifying line per target char) ─
+        # ── Style exemplar documents ──────────────────────────────────────────
         for exemplar_char in _EXEMPLAR_CHARS:
             if exemplar_char not in chars_set:
                 continue
             for turn_idx, (speaker, line) in enumerate(merged):
                 if speaker != exemplar_char:
                     continue
-                if len(line.split()) < _EXEMPLAR_MIN_WORDS:
-                    continue
-                ctx = merged[max(0, turn_idx - _EXEMPLAR_CONTEXT_TURNS):turn_idx]
-                if not ctx:
-                    continue
-                ctx_text      = "\n".join(f"{s}: {d}" for s, d in ctx)
-                exemplar_text = f"{ctx_text}\n{exemplar_char}: {line}"
-                char_slug     = exemplar_char.lower()
+                words = len(line.split())
+                ctx   = merged[max(0, turn_idx - _EXEMPLAR_CONTEXT_TURNS):turn_idx]
 
+                if ctx:
+                    # Normal case: line with preceding dialogue context
+                    if words < _EXEMPLAR_MIN_WORDS:
+                        continue
+                    ctx_text      = "\n".join(f"{s}: {d}" for s, d in ctx)
+                    exemplar_text = f"{ctx_text}\n{exemplar_char}: {line}"
+                else:
+                    # No preceding context — only keep substantial solo monologues
+                    # (talking-head confessionals in The Office, cold-open speeches, etc.)
+                    if words < _EXEMPLAR_MIN_WORDS_SOLO:
+                        continue
+                    exemplar_text = f"{exemplar_char}: {line}"
+
+                char_slug = exemplar_char.lower()
                 docs.append(
                     SceneDoc(
                         doc_id=(
@@ -482,8 +335,51 @@ def parse_merged_csv(csv_path: str) -> List[SceneDoc]:
                     )
                 )
 
+    # ── Main parsing loop ─────────────────────────────────────────────────────
+    # TBBT: scenes are already full-sized → one doc per scene.
+    # The Office: scenes are tiny beats (median 4 lines, 39% have 1-2 lines)
+    # with a global scene counter.  Merge consecutive scenes within each episode
+    # into chunks of ≥ _OFFICE_MIN_SCENE_LINES for richer canon docs.
+
+    # ── TBBT pass ────────────────────────────────────────────────────────────
+    bbt_cfg = _SHOW_CONFIG["The Big Bang Theory"]
+    bbt_df  = df[df["show"] == "The Big Bang Theory"]
+    for (season, episode, scene), group in bbt_df.groupby(
+        ["season", "episode", "scene"], sort=True
+    ):
+        raw   = list(zip(group["character"].tolist(), group["dialogue"].tolist()))
+        merged = _merge_consecutive_lines(raw)
+        _emit_docs(bbt_cfg, _safe_int(season), _safe_int(episode), _safe_int(scene), merged)
+
+    # ── The Office pass ───────────────────────────────────────────────────────
+    off_cfg = _SHOW_CONFIG["The Office"]
+    off_df  = df[df["show"] == "The Office"]
+    for (season, episode), ep_group in off_df.groupby(["season", "episode"], sort=True):
+        season_i  = _safe_int(season)
+        episode_i = _safe_int(episode)
+
+        # Collect (scene_id, raw_lines) pairs in scene order
+        scene_pairs: List[Tuple[int, List[Tuple[str, str]]]] = []
+        for scene, sc_group in ep_group.groupby("scene", sort=True):
+            raw = list(zip(sc_group["character"].tolist(), sc_group["dialogue"].tolist()))
+            if raw:
+                scene_pairs.append((_safe_int(scene), raw))
+
+        if not scene_pairs:
+            continue
+
+        # Merge tiny scenes into chunks
+        chunks = _chunk_episode_scenes(scene_pairs, _OFFICE_MIN_SCENE_LINES)
+        for first_scene_id, chunk_lines in chunks:
+            merged = _merge_consecutive_lines(chunk_lines)
+            _emit_docs(off_cfg, season_i, episode_i, first_scene_id, merged)
+
     return docs
 
+
+# ---------------------------------------------------------------------------
+# ChromaDB upsert
+# ---------------------------------------------------------------------------
 
 def upsert_to_chroma(
     docs: List[SceneDoc],
@@ -491,18 +387,9 @@ def upsert_to_chroma(
     collection_name: str,
     reset: bool,
     workers: int = 4,
-    batch_size: int = 500,
+    batch_size: int = 1000,
 ) -> None:
-    """Upsert all docs into ChromaDB using a thread pool.
-
-    Each worker thread embeds + writes its own batch concurrently.
-    The main speedup comes from parallelising the sentence-transformer
-    embedding step, which is the CPU bottleneck.
-
-    workers    — number of concurrent upsert threads (default 4)
-    batch_size — docs per batch; smaller batches → more parallelism,
-                 larger batches → better embedding throughput per call
-    """
+    """Upsert all docs into ChromaDB using a thread pool."""
     os.makedirs(persist_dir, exist_ok=True)
     client = chromadb.PersistentClient(path=persist_dir)
 
@@ -518,7 +405,6 @@ def upsert_to_chroma(
     total   = len(docs)
     batches = [docs[i : i + batch_size] for i in range(0, total, batch_size)]
 
-    # Thread-safe progress counter
     ingested_count = 0
     lock = threading.Lock()
 
@@ -538,70 +424,50 @@ def upsert_to_chroma(
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(_upsert_batch, b): b for b in batches}
         for future in as_completed(futures):
-            n = future.result()          # re-raises any exception from the worker
+            n = future.result()
             with lock:
                 ingested_count += n
                 pct = ingested_count * 100 // total
                 print(f"  Ingested {ingested_count:,} / {total:,} docs ({pct}%)")
 
 
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Build scene-level ChromaDB for TV dialogue CSVs",
+        description="Build scene-level ChromaDB from merged_tv_dialogues.csv",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  python build_chromadb.py --reset                          # default: merged CSV\n"
-            "  python build_chromadb.py --merged-csv merged_tv_dialogues.csv --reset\n"
-            "  python build_chromadb.py --source separate --reset        # use original CSVs\n"
+            "  python build_chromadb.py --reset\n"
+            "  python build_chromadb.py --csv merged_tv_dialogues.csv --reset\n"
         ),
     )
-    # ── Primary mode: merged CSV (default) ────────────────────────────────────
     parser.add_argument(
-        "--merged-csv", default="merged_tv_dialogues.csv",
-        help="Path to the merged dialogue CSV (default: merged_tv_dialogues.csv). "
-             "Used when --source=merged (the default).",
+        "--csv", default="merged_tv_dialogues.csv",
+        help="Path to merged_tv_dialogues.csv (default: merged_tv_dialogues.csv)",
     )
-    # ── Legacy mode: separate CSVs ────────────────────────────────────────────
-    parser.add_argument(
-        "--source", choices=["merged", "separate"], default="merged",
-        help="'merged' (default) reads merged_tv_dialogues.csv; "
-             "'separate' reads --office-csv and --bigbang-csv individually.",
-    )
-    parser.add_argument("--office-csv",  default="TheOffice.csv",   help="Path to The Office CSV (--source=separate only)")
-    parser.add_argument("--bigbang-csv", default="TBBTcleaned.csv", help="Path to TBBT CSV (--source=separate only)")
-    parser.add_argument("--show", choices=["office", "bigbang", "both"], default="both",
-                        help="Which show(s) to load when --source=separate (default: both)")
-    # ── Common options ─────────────────────────────────────────────────────────
     parser.add_argument("--persist-dir", default="./chroma_db")
     parser.add_argument("--collection",  default="tv_scenes")
     parser.add_argument("--reset", action="store_true",
                         help="Delete and recreate the collection before upsert")
     parser.add_argument(
         "--workers", type=int, default=4,
-        help="Number of concurrent upsert threads (default: 4). "
-             "Set to 1 to disable concurrency.",
+        help="Number of concurrent upsert threads (default: 4)",
     )
     parser.add_argument(
         "--batch-size", type=int, default=500,
-        help="Documents per upsert batch (default: 500).",
+        help="Documents per upsert batch (default: 500)",
     )
     args = parser.parse_args()
 
-    all_docs: List[SceneDoc] = []
-
-    if args.source == "merged":
-        print(f"Parsing merged CSV: {args.merged_csv}")
-        all_docs = parse_merged_csv(args.merged_csv)
-    else:
-        # Legacy: separate CSV files
-        if args.show in ("office", "both"):
-            all_docs.extend(parse_office_csv(args.office_csv))
-        if args.show in ("bigbang", "both"):
-            all_docs.extend(parse_bigbang_csv(args.bigbang_csv))
+    print(f"Parsing merged CSV: {args.csv}")
+    all_docs = parse_merged_csv(args.csv)
 
     if not all_docs:
-        raise SystemExit("No documents generated; check CSV paths/content.")
+        raise SystemExit("No documents generated; check CSV path/content.")
 
     upsert_to_chroma(
         all_docs,
@@ -612,15 +478,15 @@ def main() -> None:
         batch_size=args.batch_size,
     )
 
-    # ── Summary ──────────────────────────────────────────────────────────────
+    # ── Summary ───────────────────────────────────────────────────────────────
     shows: Dict[str, dict] = {}
     all_characters: set    = set()
     for d in all_docs:
-        show      = d.metadata.get("show", "unknown")
-        doc_type  = d.metadata.get("doc_type", "canon")
-        season    = d.metadata.get("season")
-        ep        = d.metadata.get("episode")
-        chars     = json.loads(d.metadata.get("characters_present", "[]"))
+        show     = d.metadata.get("show", "unknown")
+        doc_type = d.metadata.get("doc_type", "canon")
+        season   = d.metadata.get("season")
+        ep       = d.metadata.get("episode")
+        chars    = json.loads(d.metadata.get("characters_present", "[]"))
 
         if show not in shows:
             shows[show] = {"canon": 0, "exemplar": 0, "episodes": set(), "characters": set()}

@@ -1,92 +1,162 @@
 """
-TV Character Profiler — Sheldon, Leonard, Michael, Dwight
-=========================================================
-Analyzes dialogue data from a merged CSV (TBBT + The Office) to build
-character profiles automatically.
+TV Character Profiler
+=====================
+Analyzes dialogue data from a CSV to build character profiles automatically.
+Works with any show/character combination — no show-specific logic hardcoded.
 
 Two stages:
   1. Statistical analysis (pure Python) — speech patterns, relationships,
-     vocabulary, tone indicators, seasonal evolution, sample dialogues
-  2. LLM synthesis (Ollama) — generates concise CHARACTER_DESCRIPTIONS strings
-     (2nd-person, 3–5 sentences, no headings/bullets) from the analysis
+     vocabulary, seasonal evolution, sample dialogues
+  2. LLM synthesis (Groq) — generates structured system-prompt descriptions
+     (IDENTITY, SPEECH STYLE, BEHAVIORAL TRIGGERS, RULES, RESPONSE STYLE)
+     from the analysis
 
-Requires:  merged_tv_dialogues.csv  (columns: show, season, episode, scene, character, dialogue)
+Requires a CSV with columns: show, season, episode, scene, character, dialogue
 
 Usage:
-  python character_profiler.py                  # Stage 1 only  → character_profiles.json
-  python character_profiler.py --synthesize     # Stage 1 + 2   → also writes character_profiles.json
-  python character_profiler.py --synthesize --model mistral  # Use a specific Ollama model
+  python character_profiler.py                                      # auto-discover top 2 per show
+  python character_profiler.py --characters "Sheldon,Leonard"       # explicit character list
+  python character_profiler.py --top-n 3                            # top 3 per show
+  python character_profiler.py --synthesize                         # Stage 1 + 2 (Groq)
+  python character_profiler.py --synthesize --model llama-3.1-70b-versatile
+  python character_profiler.py --csv other.csv --output out.json    # custom paths
+
+Set GROQ_API_KEY environment variable before running --synthesize.
 """
 
+import argparse
 import json
-import re
+import os
 from collections import Counter, defaultdict
+
 import pandas as pd
-import requests
+from dotenv import load_dotenv
+from openai import OpenAI
 
 # ─────────────────────────────────────────────
-# CONFIG
+# DEFAULTS (all overridable via CLI)
 # ─────────────────────────────────────────────
-CSV_PATH              = "merged_tv_dialogues.csv"
-OUTPUT_PATH           = "character_profiles.json"
-STATS_OUTPUT_PATH     = "character_stats.json"
+_DEFAULT_CSV_PATH        = "merged_tv_dialogues.csv"
+_DEFAULT_OUTPUT_PATH     = "character_profiles.json"
+_DEFAULT_STATS_PATH      = "character_stats.json"
+_DEFAULT_GROQ_MODEL      = "qwen/qwen3-32b"
+_DEFAULT_TOP_N           = 2   # characters per show when auto-discovering
 
-MAIN_CHARACTERS = ["Sheldon", "Leonard", "Michael", "Dwight"]
+# ── Analysis thresholds ────────────────────────────────────────────────────
+# All are data-derived defaults; override via function arguments if needed.
+_MIN_WORD_OCCURRENCES    = 5     # TF-IDF: ignore words seen fewer times
+_MIN_WORD_LENGTH         = 3     # TF-IDF: ignore very short words
+_NGRAM_RANGE             = (2, 5)  # n-gram sizes to scan for repeated phrases
+_MIN_NGRAM_OCCURRENCES   = 5     # a phrase must appear this many times to count
+_CATCHPHRASE_MAX_WORDS   = 6     # max words for a line to be a "catchphrase"
+_CATCHPHRASE_MIN_REPEATS = 3     # min repetitions to qualify as catchphrase
+_TOP_DISTINCTIVE_WORDS   = 30    # how many distinctive words to keep
+_TOP_REPEATED_PHRASES    = 15    # how many repeated phrases to keep
+_TOP_CATCHPHRASES        = 15    # how many catchphrases to keep
+_TOP_CO_STARS            = 10    # relationship: scenes together
+_TOP_TURN_ADJACENCY      = 7     # relationship: turn-taking partners
 
-SHOW_MAP = {
-    "Sheldon": "The Big Bang Theory",
-    "Leonard": "The Big Bang Theory",
-    "Michael": "The Office",
-    "Dwight":  "The Office",
-}
+# ── Synthesis LLM settings ─────────────────────────────────────────────────
+_SYNTHESIS_TEMPERATURE   = 0.7
+_SYNTHESIS_MAX_TOKENS    = 1536
+_SYNTHESIS_TIMEOUT       = 300   # seconds
 
-# Entries to treat as non-character in both shows
-SKIP_CHARACTERS = frozenset({
+# ── Slim data limits (how much data to send to the LLM) ───────────────────
+_SLIM_REPEATED_PHRASES   = 10
+_SLIM_DISTINCTIVE_WORDS  = 20
+_SLIM_CO_STARS           = 6
+_SLIM_MONOLOGUES         = 5     # longest lines
+_SLIM_RANDOM_SAMPLE      = 12    # random dialogue samples
+
+# Non-character entries to exclude when loading the CSV.
+# Extend via --skip on the CLI; these are always excluded.
+_DEFAULT_SKIP_CHARACTERS = frozenset({
     "Scene", "Stage Direction", "Stage Directions",
     "All", "Both", "Everyone", "Everyone:", "Narrator",
     "Group", "Crowd", "Together", "Various", "Others",
     "Office", "Employees", "Voicemail",
 })
 
-OLLAMA_URL          = "http://localhost:11434/api/generate"
-DEFAULT_OLLAMA_MODEL = "llama3"
+
+# ─────────────────────────────────────────────
+# CHARACTER / SHOW DISCOVERY
+# ─────────────────────────────────────────────
+def discover_characters(df: pd.DataFrame, top_n: int = 2) -> dict:
+    """Auto-discover the *top_n* most frequent speakers per show.
+
+    Returns ``{character_name: show_name}`` for every discovered character,
+    ordered by line count (most talkative first).
+    """
+    result: dict = {}
+    for show in sorted(df["show"].unique()):
+        show_df = df[df["show"] == show]
+        top = show_df["character"].value_counts().head(top_n).index.tolist()
+        for char in top:
+            result[char] = show
+    return result
+
+
+def build_show_map(df: pd.DataFrame, characters: list) -> dict:
+    """Derive ``{character: show}`` from the CSV data.
+
+    For each character, picks the show they appear in most often (by mode).
+    Raises ``ValueError`` if a requested character is not found in the data.
+    """
+    show_map: dict = {}
+    missing = []
+    for char in characters:
+        char_df = df[df["character"] == char]
+        if char_df.empty:
+            missing.append(char)
+            continue
+        show_map[char] = char_df["show"].mode().iloc[0]
+
+    if missing:
+        available = sorted(df["character"].value_counts().head(40).index.tolist())
+        raise ValueError(
+            f"Characters not found in CSV: {missing}\n"
+            f"Top speakers in the data: {available}"
+        )
+    return show_map
 
 
 # ─────────────────────────────────────────────
 # LOAD DATA
 # ─────────────────────────────────────────────
-def load_data(path: str) -> pd.DataFrame:
-    """Load merged_tv_dialogues.csv and compute helper columns.
+def load_data(path: str, skip_characters: frozenset | None = None) -> pd.DataFrame:
+    """Load a dialogue CSV and compute helper columns.
 
     Expected schema: show, season, episode, scene, character, dialogue
-    A globally-unique scene_key is derived from those four fields so
-    the rest of the pipeline can group and compare scenes without
-    assuming any column is globally unique on its own.
-    (TBBT 'scene' is per-episode 0–21; Office 'scene' is cumulative 1–8157.)
+    A globally-unique ``scene_key`` is derived so the rest of the pipeline
+    can group and compare scenes without assuming any column is globally
+    unique on its own.
     """
+    if skip_characters is None:
+        skip_characters = _DEFAULT_SKIP_CHARACTERS
+
     df = pd.read_csv(path)
-    # Validate expected columns
+
     required = {"show", "season", "episode", "scene", "character", "dialogue"}
     missing = required - set(df.columns)
     if missing:
         raise ValueError(
             f"{path} is missing columns: {sorted(missing)}\n"
-            "Expected merged_tv_dialogues.csv with columns: "
-            "show, season, episode, scene, character, dialogue"
+            f"Expected columns: {sorted(required)}"
         )
-    # Drop non-character rows
-    df = df[~df["character"].isin(SKIP_CHARACTERS)].copy()
+
+    df = df[~df["character"].isin(skip_characters)].copy()
     df["dialogue"] = df["dialogue"].fillna("").astype(str)
     df = df[df["character"].str.strip() != ""]
     df = df[df["dialogue"].str.strip() != ""]
     df["word_count"] = df["dialogue"].str.split().str.len()
-    df["char_count"]  = df["dialogue"].str.len()
-    # Build a globally-unique scene key: e.g. "the_big_bang_theory_s01e01_sc0001"
+    df["char_count"] = df["dialogue"].str.len()
+
+    # Build a globally-unique scene key
     df["scene_key"] = (
         df["show"].str.lower().str.replace(" ", "_", regex=False)
         + "_s" + df["season"].astype(str).str.zfill(2)
         + "e"  + df["episode"].astype(str).str.zfill(2)
-        + "_sc"+ df["scene"].astype(str).str.zfill(5)
+        + "_sc" + df["scene"].astype(str).str.zfill(5)
     )
     df = df.reset_index(drop=True)
     return df
@@ -125,16 +195,13 @@ def analyze_speech_patterns(df: pd.DataFrame, character: str) -> dict:
 # ─────────────────────────────────────────────
 # 2. CATCHPHRASES & DISTINCTIVE VOCABULARY
 # ─────────────────────────────────────────────
-def find_distinctive_phrases(df: pd.DataFrame, character: str, top_n: int = 30) -> dict:
-    """
-    Find words/phrases distinctively used by this character vs others *from the
-    same show*.  Comparing within the same show avoids inflating scores with
-    vocabulary differences that are just TBBT-vs-Office genre gaps.
-    """
+def find_distinctive_phrases(df: pd.DataFrame, character: str) -> dict:
+    """Find words/phrases distinctively used by this character vs others
+    *from the same show*.  Comparing within the same show avoids inflating
+    scores with genre-level vocabulary differences."""
     char_df = df[df["character"] == character]
     char_show = char_df["show"].iloc[0] if len(char_df) > 0 else None
 
-    # Compare against all OTHER characters from the same show
     if char_show:
         other_df = df[(df["show"] == char_show) & (df["character"] != character)]
     else:
@@ -152,35 +219,49 @@ def find_distinctive_phrases(df: pd.DataFrame, character: str, top_n: int = 30) 
     # TF-IDF-like distinctiveness score
     distinctive: dict = {}
     for word, count in char_words.items():
-        if count < 5 or len(word) < 3:
+        if count < _MIN_WORD_OCCURRENCES or len(word) < _MIN_WORD_LENGTH:
             continue
         char_freq  = count / char_total
         other_freq = (other_words.get(word, 0) + 1) / other_total
         distinctive[word] = round(char_freq / other_freq, 2)
 
-    top_distinctive = sorted(distinctive.items(), key=lambda x: -x[1])[:top_n]
+    top_distinctive = sorted(
+        distinctive.items(), key=lambda x: -x[1]
+    )[:_TOP_DISTINCTIVE_WORDS]
 
-    # Repeated n-grams (2–4 words)
+    # Repeated n-grams
     ngram_counts: dict = defaultdict(int)
+    lo, hi = _NGRAM_RANGE
     for line in char_df["dialogue"].tolist():
-        line_lower = line.lower().strip()
-        wds = line_lower.split()
-        for n in range(2, 5):
+        wds = line.lower().strip().split()
+        for n in range(lo, hi):
             for i in range(len(wds) - n + 1):
                 ngram_counts[" ".join(wds[i : i + n])] += 1
 
-    repeated_phrases = {k: v for k, v in ngram_counts.items() if v >= 5}
-    phrase_scores    = {k: v * len(k.split()) for k, v in repeated_phrases.items()}
-    top_phrases      = sorted(phrase_scores.items(), key=lambda x: -x[1])[:20]
+    repeated_phrases = {
+        k: v for k, v in ngram_counts.items() if v >= _MIN_NGRAM_OCCURRENCES
+    }
+    phrase_scores = {k: v * len(k.split()) for k, v in repeated_phrases.items()}
+    top_phrases   = sorted(
+        phrase_scores.items(), key=lambda x: -x[1]
+    )[:_TOP_REPEATED_PHRASES]
 
-    # Verbatim catchphrases (short lines repeated ≥ 3 times)
-    short_lines = char_df[char_df["word_count"] <= 6]["dialogue"].str.lower().str.strip()
+    # Verbatim catchphrases (short lines repeated multiple times)
+    short_lines = (
+        char_df[char_df["word_count"] <= _CATCHPHRASE_MAX_WORDS]["dialogue"]
+        .str.lower()
+        .str.strip()
+    )
     catchphrase_counts = short_lines.value_counts()
-    catchphrases = catchphrase_counts[catchphrase_counts >= 3].head(15).to_dict()
+    catchphrases = (
+        catchphrase_counts[catchphrase_counts >= _CATCHPHRASE_MIN_REPEATS]
+        .head(_TOP_CATCHPHRASES)
+        .to_dict()
+    )
 
     return {
         "distinctive_words": dict(top_distinctive),
-        "repeated_phrases":  dict(top_phrases[:15]),
+        "repeated_phrases":  dict(top_phrases),
         "catchphrases":      catchphrases,
     }
 
@@ -188,24 +269,29 @@ def find_distinctive_phrases(df: pd.DataFrame, character: str, top_n: int = 30) 
 # ─────────────────────────────────────────────
 # 3. RELATIONSHIP ANALYSIS
 # ─────────────────────────────────────────────
-def analyze_relationships(df: pd.DataFrame, character: str) -> dict:
+def analyze_relationships(
+    df: pd.DataFrame, character: str, skip_characters: frozenset | None = None,
+) -> dict:
+    """Analyse co-occurrence and conversational adjacency.
+
+    Uses ``scene_key`` (globally unique per scene) for grouping.
     """
-    Analyse co-occurrence and conversational adjacency.
-    Uses scene_key (globally unique per scene in the merged CSV) for grouping.
-    """
+    if skip_characters is None:
+        skip_characters = _DEFAULT_SKIP_CHARACTERS
+
     char_scenes = df[df["character"] == character]["scene_key"].drop_duplicates()
 
     co_occurrences: Counter = Counter()
     for scene_key in char_scenes:
         scene_chars = df[
             (df["scene_key"] == scene_key)
-            & (~df["character"].isin(SKIP_CHARACTERS))
+            & (~df["character"].isin(skip_characters))
             & (df["character"] != character)
         ]["character"].unique()
         for other in scene_chars:
             co_occurrences[other] += 1
 
-    # Conversational turn adjacency — only count within the same scene_key
+    # Conversational turn adjacency — only within the same scene_key
     char_indices    = df[df["character"] == character].index
     responds_to_me: Counter = Counter()
     i_respond_to:   Counter = Counter()
@@ -214,101 +300,22 @@ def analyze_relationships(df: pd.DataFrame, character: str) -> dict:
         curr_scene = df.loc[idx, "scene_key"]
         if idx + 1 in df.index and df.loc[idx + 1, "scene_key"] == curr_scene:
             next_char = df.loc[idx + 1, "character"]
-            if next_char not in SKIP_CHARACTERS and next_char != character:
+            if next_char not in skip_characters and next_char != character:
                 responds_to_me[next_char] += 1
         if idx - 1 in df.index and df.loc[idx - 1, "scene_key"] == curr_scene:
             prev_char = df.loc[idx - 1, "character"]
-            if prev_char not in SKIP_CHARACTERS and prev_char != character:
+            if prev_char not in skip_characters and prev_char != character:
                 i_respond_to[prev_char] += 1
 
     return {
-        "scenes_together":     dict(co_occurrences.most_common(10)),
-        "most_responds_to_me": dict(responds_to_me.most_common(7)),
-        "i_most_respond_to":   dict(i_respond_to.most_common(7)),
+        "scenes_together":     dict(co_occurrences.most_common(_TOP_CO_STARS)),
+        "most_responds_to_me": dict(responds_to_me.most_common(_TOP_TURN_ADJACENCY)),
+        "i_most_respond_to":   dict(i_respond_to.most_common(_TOP_TURN_ADJACENCY)),
     }
 
 
 # ─────────────────────────────────────────────
-# 4. EMOTIONAL TONE INDICATORS
-# ─────────────────────────────────────────────
-def analyze_tone(df: pd.DataFrame, character: str) -> dict:
-    """
-    Heuristic tone analysis with patterns relevant to both TBBT and The Office
-    characters.
-    """
-    char_df  = df[df["character"] == character]
-    dialogues = char_df["dialogue"].tolist()
-    total     = max(len(dialogues), 1)
-
-    patterns = {
-        # TBBT-skewed
-        "scientific_technical": (
-            r"\b(theorem|hypothesis|equation|quantum|physics|experiment|molecule"
-            r"|algorithm|data|variable|coefficient|proton|electron|neutron"
-            r"|paradigm|photon|theoretical|empirical|string theory)\b"
-        ),
-        # Office-skewed (Michael)
-        "management_speak": (
-            r"\b(synergy|leverage|team player|proactive|mission statement"
-            r"|best practices|paradigm shift|incentivize|strategize|morale"
-            r"|that's what she said|world's best boss|regional manager"
-            r"|motivate|teamwork|fun workplace)\b"
-        ),
-        # Office-skewed (Dwight)
-        "authority_rank": (
-            r"\b(assistant|regional manager|superior|rank|authority|protocol"
-            r"|rule|regulation|order|command|i outrank|pursuant to|duty"
-            r"|second in command|assistant to the|enforce)\b"
-        ),
-        # Office-skewed (Dwight)
-        "survival_outdoors": (
-            r"\b(beet|farm|survival|weapons|bear|hunt|train|mose|schrute"
-            r"|acreage|harvest|defence|strength|combat|militia|nunchucks"
-            r"|throwing stars|crossbow|karate|self.reliance)\b"
-        ),
-        # Office-skewed
-        "sales_business": (
-            r"\b(paper|sales|quota|client|commission|customer|discount"
-            r"|delivery|dunder mifflin|shipment|account|invoice|supply)\b"
-        ),
-        # General
-        "sarcasm_markers": (
-            r"\b(oh really|wow|gee|sure|right|yeah right|obviously"
-            r"|clearly|apparently)\b"
-        ),
-        "affection": (
-            r"\b(love|sweetie|honey|dear|baby|sweetheart|babe|darling|bestie)\b"
-        ),
-        "insults_put_downs": (
-            r"\b(idiot|stupid|dumb|moron|loser|pathetic|fool|ridiculous|incompetent)\b"
-        ),
-        "uncertainty": (
-            r"\b(maybe|perhaps|i guess|i think|i don't know|not sure|might)\b"
-        ),
-        "formal_language": (
-            r"\b(therefore|furthermore|moreover|consequently|nevertheless"
-            r"|indeed|thus|hereby|whereas)\b"
-        ),
-        "pop_culture": (
-            r"\b(star trek|star wars|comic|batman|superman|marvel|dc|hobbit"
-            r"|lord of the rings|harry potter|dungeons|xbox|playstation"
-            r"|video game|klingon|jedi)\b"
-        ),
-        "self_reference": (
-            r"\b(i am|i'm|my|me|myself|i have|i've|i was|i will|i'll)\b"
-        ),
-    }
-
-    results = {}
-    for name, pattern in patterns.items():
-        count = sum(1 for d in dialogues if re.search(pattern, d, re.IGNORECASE))
-        results[name] = round(count / total, 3)
-
-    return results
-
-
-# ─────────────────────────────────────────────
-# 5. TEMPORAL EVOLUTION
+# 4. TEMPORAL EVOLUTION
 # ─────────────────────────────────────────────
 def analyze_evolution(df: pd.DataFrame, character: str) -> dict:
     """Track how the character's dialogue changes across seasons."""
@@ -331,89 +338,94 @@ def analyze_evolution(df: pd.DataFrame, character: str) -> dict:
 
 
 # ─────────────────────────────────────────────
-# 6. SAMPLE DIALOGUE EXTRACTION
+# 5. SAMPLE DIALOGUE EXTRACTION
 # ─────────────────────────────────────────────
-def extract_sample_dialogues(df: pd.DataFrame, character: str, n_samples: int = 10) -> dict:
-    """Extract representative dialogue samples — longest and random lines."""
+def extract_sample_dialogues(df: pd.DataFrame, character: str) -> dict:
+    """Extract representative dialogue samples — longest and random lines.
+
+    Uses ``_SLIM_MONOLOGUES`` and ``_SLIM_RANDOM_SAMPLE`` to decide how
+    many of each to keep.
+    """
     char_df = df[df["character"] == character]
 
-    long_lines    = char_df.nlargest(n_samples, "word_count")["dialogue"].tolist()
-    sample_size   = min(n_samples, len(char_df))
-    random_lines  = char_df.sample(sample_size, random_state=42)["dialogue"].tolist()
+    n_grab = max(_SLIM_MONOLOGUES, _SLIM_RANDOM_SAMPLE)
+    long_lines   = char_df.nlargest(n_grab, "word_count")["dialogue"].tolist()
+    sample_size  = min(n_grab, len(char_df))
+    random_lines = char_df.sample(sample_size, random_state=42)["dialogue"].tolist()
 
     return {
-        "longest_monologues": long_lines[:5],
-        "random_sample":      random_lines[:10],
+        "longest_monologues": long_lines[:_SLIM_MONOLOGUES],
+        "random_sample":      random_lines[:_SLIM_RANDOM_SAMPLE],
     }
 
 
 # ─────────────────────────────────────────────
 # MAIN PIPELINE
 # ─────────────────────────────────────────────
-def build_all_profiles(df: pd.DataFrame, characters: list) -> dict:
+def build_all_profiles(
+    df: pd.DataFrame,
+    characters: list,
+    show_map: dict,
+    skip_characters: frozenset | None = None,
+) -> dict:
     """Run full Stage-1 analysis pipeline for all characters."""
     profiles = {}
 
     for char in characters:
-        print(f"  Analyzing {char} ({SHOW_MAP.get(char, '?')})...")
+        print(f"  Analyzing {char} ({show_map.get(char, '?')})...")
         profiles[char] = {
-            "show":              SHOW_MAP.get(char, ""),
-            "speech_patterns":   analyze_speech_patterns(df, char),
+            "show":                show_map.get(char, ""),
+            "speech_patterns":     analyze_speech_patterns(df, char),
             "distinctive_language": find_distinctive_phrases(df, char),
-            "relationships":     analyze_relationships(df, char),
-            "tone_indicators":   analyze_tone(df, char),
+            "relationships":       analyze_relationships(df, char, skip_characters),
             "evolution_by_season": analyze_evolution(df, char),
-            "sample_dialogues":  extract_sample_dialogues(df, char),
+            "sample_dialogues":    extract_sample_dialogues(df, char),
         }
 
     return profiles
 
 
 # ─────────────────────────────────────────────
-# STAGE 2 — OLLAMA SYNTHESIS
+# STAGE 2 — GROQ SYNTHESIS
 # ─────────────────────────────────────────────
-def _call_ollama(prompt: str, model: str) -> str:
+def _call_groq(client: OpenAI, prompt: str, model: str) -> str:
+    """Send a single prompt to Groq and return the text response."""
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=_SYNTHESIS_TEMPERATURE,
+        max_tokens=_SYNTHESIS_MAX_TOKENS,
+    )
+    return resp.choices[0].message.content.strip()
+
+
+def synthesize_with_llm(
+    profiles: dict,
+    show_map: dict,
+    model: str = _DEFAULT_GROQ_MODEL,
+) -> dict:
+    """Call Groq once per character to turn raw stats into a structured
+    system-prompt description.
+
+    Reads GROQ_API_KEY from the environment (raises SystemExit if missing).
+    Returns ``{character_name: description_string}``.
     """
-    Send a single prompt to the local Ollama server and return the response.
-    Uses the /api/generate endpoint (non-streaming).
-    """
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "temperature": 0.7,
-            "num_predict": 1536,  # 4-section format needs more room than the old 3-5 sentences
-        },
-    }
-    try:
-        resp = requests.post(OLLAMA_URL, json=payload, timeout=300)
-        resp.raise_for_status()
-        return resp.json().get("response", "").strip()
-    except requests.exceptions.ConnectionError:
-        raise RuntimeError(
-            f"Cannot reach Ollama at {OLLAMA_URL}. "
-            "Make sure Ollama is running:  ollama serve"
+    load_dotenv()
+    api_key = os.environ.get("GROQ_API_KEY", "")
+    if not api_key:
+        raise SystemExit(
+            "ERROR: GROQ_API_KEY not found.\n"
+            "Add it to your .env file:  GROQ_API_KEY=gsk_...\n"
+            "Or get a free key at https://console.groq.com"
         )
-    except requests.exceptions.HTTPError as exc:
-        raise RuntimeError(f"Ollama HTTP error: {exc}")
-
-
-def synthesize_with_llm(profiles: dict, model: str = DEFAULT_OLLAMA_MODEL) -> dict:
-    """
-    Call a local Ollama model once per character to turn raw stats into a
-    concise CHARACTER_DESCRIPTIONS-style string.
-
-    Returns {character_name: description_string}.
-    """
+    client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
     synthesized = {}
 
     for char, data in profiles.items():
-        show_name = data.get("show") or SHOW_MAP.get(char, "a TV show")
+        show_name = data.get("show") or show_map.get(char, "a TV show")
         print(f"  Synthesising {char} ({show_name}, model: {model})...")
 
         # Trim the payload to the most signal-rich keys.
-        # Keep real sample lines so the model can see the character's actual voice.
         slim_data = {
             "speech_patterns": data.get("speech_patterns", {}),
             "catchphrases": data.get("distinctive_language", {}).get("catchphrases", {}),
@@ -421,25 +433,24 @@ def synthesize_with_llm(profiles: dict, model: str = DEFAULT_OLLAMA_MODEL) -> di
                 data.get("distinctive_language", {})
                     .get("repeated_phrases", {})
                     .items()
-            )[:10]),
+            )[:_SLIM_REPEATED_PHRASES]),
             "top_distinctive_words": list(
                 data.get("distinctive_language", {})
                     .get("distinctive_words", {})
                     .keys()
-            )[:20],
+            )[:_SLIM_DISTINCTIVE_WORDS],
             "top_co_stars": list(
                 data.get("relationships", {})
                     .get("scenes_together", {})
                     .keys()
-            )[:6],
-            "tone_indicators": data.get("tone_indicators", {}),
+            )[:_SLIM_CO_STARS],
             "sample_dialogues": {
                 "longest_monologues": data.get("sample_dialogues", {}).get(
                     "longest_monologues", []
-                )[:3],
+                )[:_SLIM_MONOLOGUES],
                 "random_sample": data.get("sample_dialogues", {}).get(
                     "random_sample", []
-                )[:8],
+                )[:_SLIM_RANDOM_SAMPLE],
             },
         }
 
@@ -449,28 +460,28 @@ The description will be injected verbatim as the chatbot's system prompt, so it 
 
 Study the statistical data below. It contains real catchphrases, repeated phrases, distinctive vocabulary, and actual sample lines from {char}'s dialogue. Use these to write something accurate and specific, not generic.
 
-OUTPUT FORMAT — write four clearly labelled sections in this exact order:
+OUTPUT FORMAT — write five clearly labelled sections in this exact order:
 
 IDENTITY: One paragraph (3-4 sentences). Who {char} is, their role, their core personality, and their most important relationships. Be specific — use names from top_co_stars, reference their job or situation.
 
 SPEECH STYLE: One paragraph (3-5 sentences). How {char} actually talks. Sentence length and structure, how they open sentences, verbal tics, how they handle uncertainty or disagreement. Ground this in the real catchphrases and repeated_phrases from the data — quote them directly if they are distinctive.
 
+BEHAVIORAL TRIGGERS: A dash-separated list of 4-6 "When [scenario] → [exact reaction]" pairs. These are the specific situations {char} reliably reacts to in a distinctive way. Think: being corrected or proven wrong, illness or germs, someone violating a boundary they care about, a topic they obsess over, needing to apologise, someone challenging their authority or self-image. For each trigger, describe what {char} does or says with specificity — reference real catchphrases or phrases from the data. Example format: "- When corrected on a fact → [character-specific reaction]". Do NOT write generic personality traits here; write concrete stimulus-response pairs that would change what the character says mid-conversation.
+
 RULES: A short list of 4-6 "NEVER" statements. Things {char} would never say or do in conversation. Be character-specific, not generic. Examples of what a RULES line looks like: "Never admit you are wrong even when you clearly are." "Never use the phrase 'Great question!' or any other AI assistant phrasing." "Never express genuine empathy — offer clinical observations instead."
 
 RESPONSE STYLE: One sentence describing how long and what shape {char}'s responses tend to be (e.g. long lectures, short clipped commands, rambling stream-of-consciousness, self-deprecating hedges).
 
-Use ONLY plain text. No markdown, no bold, no bullet symbols beyond the RULES list dashes. Start the output immediately with "IDENTITY:" — no preamble.
+Use ONLY plain text. No markdown, no bold, no bullet symbols beyond the RULES and BEHAVIORAL TRIGGERS list dashes. Start the output immediately with "IDENTITY:" — no preamble.
 
 DATA:
 {json.dumps(slim_data, indent=2, default=str)}
 
 Write the description now:"""
 
-        desc = _call_ollama(prompt, model)
+        desc = _call_groq(client, prompt, model)
 
         # Strip any preamble Ollama adds before the first expected section header.
-        # The new 4-section format opens with "IDENTITY:"; fall back to the old
-        # "You are {char}" marker if the model ignores the format instruction.
         for marker in ("IDENTITY:", f"You are {char}"):
             idx = desc.find(marker)
             if idx != -1:
@@ -478,7 +489,7 @@ Write the description now:"""
                 break
 
         synthesized[char] = desc
-        print(f"    → {desc[:90]}...")
+        print(f"    -> {desc[:90]}...")
 
     return synthesized
 
@@ -486,60 +497,122 @@ Write the description now:"""
 # ─────────────────────────────────────────────
 # ENTRY POINT
 # ─────────────────────────────────────────────
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Profile TV characters from merged_tv_dialogues.csv"
+def _build_cli() -> argparse.ArgumentParser:
+    """Construct the argument parser."""
+    p = argparse.ArgumentParser(
+        description="Profile TV characters from a dialogue CSV"
     )
-    parser.add_argument(
+
+    # ── I/O paths ──
+    p.add_argument(
+        "--csv", default=_DEFAULT_CSV_PATH,
+        help=f"Path to the dialogue CSV (default: {_DEFAULT_CSV_PATH})",
+    )
+    p.add_argument(
+        "--output", default=_DEFAULT_OUTPUT_PATH,
+        help=f"Output path for synthesized/stage-1 profiles (default: {_DEFAULT_OUTPUT_PATH})",
+    )
+    p.add_argument(
+        "--stats-output", default=_DEFAULT_STATS_PATH,
+        help=f"Output path for raw Stage-1 stats (default: {_DEFAULT_STATS_PATH})",
+    )
+
+    # ── Character selection ──
+    p.add_argument(
+        "--characters", default=None,
+        help="Comma-separated character names to profile (e.g. 'Sheldon,Michael'). "
+             "If omitted, auto-discovers the --top-n most frequent speakers per show.",
+    )
+    p.add_argument(
+        "--top-n", type=int, default=_DEFAULT_TOP_N,
+        help=f"When --characters is omitted, profile this many top speakers per show "
+             f"(default: {_DEFAULT_TOP_N})",
+    )
+    p.add_argument(
+        "--skip", default=None,
+        help="Comma-separated additional non-character names to exclude "
+             "(extends built-in defaults like 'Scene', 'Narrator', etc.)",
+    )
+
+    # ── Groq synthesis ──
+    p.add_argument(
         "--synthesize", action="store_true",
-        help="Run Stage 2: call Ollama to generate CHARACTER_DESCRIPTIONS strings",
+        help="Run Stage 2: call Groq to generate system-prompt descriptions "
+             "(requires GROQ_API_KEY env var)",
     )
-    parser.add_argument(
-        "--model", default=DEFAULT_OLLAMA_MODEL,
-        help=f"Ollama model to use for synthesis (default: {DEFAULT_OLLAMA_MODEL})",
+    p.add_argument(
+        "--model", default=_DEFAULT_GROQ_MODEL,
+        help=f"Groq model for synthesis (default: {_DEFAULT_GROQ_MODEL}). "
+             "See https://console.groq.com/docs/models for available models.",
     )
-    parser.add_argument(
-        "--csv", default=CSV_PATH,
-        help=f"Path to the merged CSV (default: {CSV_PATH})",
-    )
-    args = parser.parse_args()
 
+    return p
+
+
+if __name__ == "__main__":
+    args = _build_cli().parse_args()
+
+    # ── Build the skip-characters set ───────────────────────────────────────
+    skip_characters = set(_DEFAULT_SKIP_CHARACTERS)
+    if args.skip:
+        extras = {s.strip() for s in args.skip.split(",") if s.strip()}
+        skip_characters |= extras
+    skip_characters = frozenset(skip_characters)
+
+    # ── Load data ───────────────────────────────────────────────────────────
     print(f"Loading {args.csv}...")
-    df = load_data(args.csv)
+    df = load_data(args.csv, skip_characters=skip_characters)
     print(f"  Loaded {len(df):,} lines of dialogue")
-    print(f"  Show breakdown: TBBT={len(df[df['show']=='The Big Bang Theory']):,}  "
-          f"The Office={len(df[df['show']=='The Office']):,}")
-    print(f"\nCharacters to profile: {MAIN_CHARACTERS}")
+
+    # Dynamic show breakdown (works for any number of shows)
+    show_counts = df["show"].value_counts()
+    breakdown = "  ".join(f"{show}={count:,}" for show, count in show_counts.items())
+    print(f"  Show breakdown: {breakdown}")
+
+    # ── Resolve characters + show map ───────────────────────────────────────
+    if args.characters:
+        # Explicit list from CLI
+        characters = [c.strip() for c in args.characters.split(",") if c.strip()]
+        show_map = build_show_map(df, characters)
+    else:
+        # Auto-discover top-N per show
+        show_map = discover_characters(df, top_n=args.top_n)
+        characters = list(show_map.keys())
+
+    print(f"\nCharacters to profile ({len(characters)}):")
+    for char in characters:
+        print(f"  {char} ({show_map[char]})")
     print()
 
-    # Stage 1 — statistical analysis
+    # ── Stage 1 — statistical analysis ──────────────────────────────────────
     print("Stage 1: Statistical analysis...")
-    profiles = build_all_profiles(df, MAIN_CHARACTERS)
+    profiles = build_all_profiles(df, characters, show_map, skip_characters)
 
-    with open(STATS_OUTPUT_PATH, "w") as f:
+    with open(args.stats_output, "w") as f:
         json.dump(profiles, f, indent=2, default=str)
-    print(f"\n  Raw stats saved to {STATS_OUTPUT_PATH}")
+    print(f"\n  Raw stats saved to {args.stats_output}")
 
-    # Stage 2 — Ollama synthesis (optional)
+    # ── Stage 2 — Groq synthesis (optional) ─────────────────────────────────
     if args.synthesize:
-        print(f"\nStage 2: LLM synthesis via Ollama (model: {args.model})...")
-        synthesized = synthesize_with_llm(profiles, model=args.model)
+        print(f"\nStage 2: LLM synthesis via Groq (model: {args.model})...")
+        synthesized = synthesize_with_llm(
+            profiles, show_map,
+            model=args.model,
+        )
 
-        with open(OUTPUT_PATH, "w") as f:
+        with open(args.output, "w") as f:
             json.dump(synthesized, f, indent=2, default=str)
-        print(f"\n  Synthesised profiles saved to {OUTPUT_PATH}")
+        print(f"\n  Synthesised profiles saved to {args.output}")
 
-        print("\n─── Generated CHARACTER_DESCRIPTIONS ───")
+        print("\n--- Generated Descriptions ---")
         for char, desc in synthesized.items():
-            show = SHOW_MAP.get(char, "")
-            print(f"\n[{char}]  ({show})")
+            print(f"\n[{char}]  ({show_map.get(char, '')})")
             print(desc)
     else:
-        with open(OUTPUT_PATH, "w") as f:
+        with open(args.output, "w") as f:
             json.dump(profiles, f, indent=2, default=str)
-        print(f"  Profiles (Stage 1 only) saved to {OUTPUT_PATH}")
+        print(f"  Profiles (Stage 1 only) saved to {args.output}")
         print()
         print("Run with --synthesize to generate LLM character descriptions.")
-        print(f"Use --model <name> to pick an Ollama model (default: {DEFAULT_OLLAMA_MODEL}).")
+        print(f"Use --model <name> to pick a Groq model (default: {_DEFAULT_GROQ_MODEL}).")
+        print("Requires GROQ_API_KEY environment variable.")

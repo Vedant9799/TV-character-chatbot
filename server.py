@@ -1,20 +1,15 @@
 #!/usr/bin/env python3
-"""WebSocket chatbot server — Ollama + ChromaDB RAG.
+"""WebSocket chatbot server — Groq API + ChromaDB RAG.
 
-Identical WebSocket/REST API to chatbot_server.py but uses a locally-running
-Ollama model for generation instead of a HuggingFace model. No GPU / PyTorch
-required — Ollama handles all model management.
+Uses Groq's free OpenAI-compatible API for generation.
+Set GROQ_API_KEY environment variable before running.
 
 Usage:
-    # Make sure Ollama is running and the model is pulled first:
-    #   ollama serve          (in a separate terminal if not already running)
-    #   ollama pull tinyllama:1.1b
-
+    export GROQ_API_KEY=gsk_...
     python chatbot_server_ollama.py
 
-    # Use a different model (any model you have pulled in Ollama):
-    python chatbot_server_ollama.py --model llama3.2:3b
-    python chatbot_server_ollama.py --model mistral:7b
+    # Use a different Groq model:
+    python chatbot_server_ollama.py --model llama-3.1-70b-versatile
 
     # By default the server reads character_profiles.json automatically.
     # Generate it first with:
@@ -25,9 +20,6 @@ Usage:
 
     # Skip the JSON file entirely and use only built-in descriptions:
     python chatbot_server_ollama.py --profiles none
-
-    # Both flags together:
-    python chatbot_server_ollama.py --model llama3:latest --profiles character_profiles.json
 
 The server:
   - Serves the chat UI at http://localhost:8001/
@@ -49,11 +41,11 @@ from typing import Dict, List, Optional
 
 import chromadb
 import numpy as np
-import ollama
 import uvicorn
+from dotenv import load_dotenv
+from openai import OpenAI
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 # ---------------------------------------------------------------------------
@@ -101,6 +93,9 @@ CHARACTER_DESCRIPTIONS: Dict[str, str] = {
     ),
 }
 
+# Character → show mapping.  Starts with the hardcoded fallback characters;
+# additional characters are auto-populated from profiles.json at startup via
+# _infer_show_from_description().
 SHOW_MAP: Dict[str, str] = {
     "Sheldon": "The Big Bang Theory",
     "Leonard": "The Big Bang Theory",
@@ -108,45 +103,72 @@ SHOW_MAP: Dict[str, str] = {
     "Dwight":  "The Office",
 }
 
-CHROMA_SHOW_KEY: Dict[str, str] = {
-    "The Office": "the_office",
-    "The Big Bang Theory": "big_bang_theory",
-}
+# Show display name → ChromaDB collection key.  Auto-populated at startup by
+# scanning collection metadata (see _discover_chroma_show_keys()).
+CHROMA_SHOW_KEY: Dict[str, str] = {}
 
-# Fallback response-style hints used when the profile has no RESPONSE STYLE section
-# (i.e. when using the hardcoded CHARACTER_DESCRIPTIONS rather than a synthesised profile).
-_RESPONSE_STYLE_HINTS: Dict[str, str] = {
-    "Sheldon": (
-        "Your responses can be lengthy — Sheldon thinks out loud, explains rigorously, "
-        "and never truncates an idea just to seem brief."
-    ),
-    "Leonard": (
-        "Keep responses moderate in length — Leonard is articulate and warm, "
-        "but not long-winded."
-    ),
-    "Michael": (
-        "Your responses tend to ramble — Michael goes off on tangents, makes unexpected "
-        "pop-culture references, and circles back to himself."
-    ),
-    "Dwight": (
-        "Your responses are clipped and authoritative — Dwight states facts directly "
-        "with no filler or hedging."
-    ),
-}
+
+def _discover_chroma_show_keys(col) -> Dict[str, str]:
+    """Derive SHOW_MAP display-name → ChromaDB metadata key from the collection.
+
+    Starts from the hardcoded fallback (so all known shows are always present),
+    then supplements with any additional show keys found in a collection sample.
+    Using only peek() was unreliable: peek returns the first N docs by insertion
+    order, so if one show's docs are all inserted first the other show is never
+    seen, leaving CHROMA_SHOW_KEY incomplete and RAG returning 0 for that show.
+    """
+    # Always start with the known mapping — this is the source of truth.
+    known = {
+        "The Office": "the_office",
+        "The Big Bang Theory": "big_bang_theory",
+    }
+    try:
+        sample = col.peek(limit=20)
+        metas = sample.get("metadatas") or []
+        for meta in metas:
+            chroma_key = meta.get("show", "")
+            if chroma_key and chroma_key not in known.values():
+                # Unknown show discovered in collection — add it dynamically.
+                display = chroma_key.replace("_", " ").title()
+                known[display] = chroma_key
+    except Exception:
+        pass
+    return known
+
+
+def _infer_show_from_description(desc: str) -> str:
+    """Best-effort show inference from a profile description string.
+
+    Scans for distinctive proper nouns from each show.  Returns display name
+    or empty string if uncertain.
+    """
+    lower = desc.lower()
+    # Each list contains nouns unique to that show — not hand-curated tone
+    # words, just proper nouns / place names that only appear in one show.
+    if any(term in lower for term in (
+        "dunder mifflin", "scranton", "schrute farms", "regional manager",
+    )):
+        return "The Office"
+    if any(term in lower for term in (
+        "caltech", "pasadena", "roommate agreement", "bazinga",
+    )):
+        return "The Big Bang Theory"
+    return ""
 
 
 def _parse_profile_sections(desc: str) -> Dict[str, str]:
-    """Parse a synthesised 4-section profile into named parts.
+    """Parse a synthesised profile into named parts.
 
     Recognises these headers (case-insensitive, with optional trailing spaces):
-        IDENTITY:   SPEECH STYLE:   RULES:   RESPONSE STYLE:
+        IDENTITY:   SPEECH STYLE:   BEHAVIORAL TRIGGERS:   RULES:   RESPONSE STYLE:
 
-    Returns a dict with keys ``identity``, ``speech_style``, ``rules``,
-    ``response_style`` for whichever sections are present, plus ``raw``
-    which always holds the original full string.
+    Returns a dict with keys ``identity``, ``speech_style``,
+    ``behavioral_triggers``, ``rules``, ``response_style`` for whichever
+    sections are present, plus ``raw`` which always holds the original full
+    string.
     """
     # Split on the known section headers, keeping the delimiter tokens
-    pattern = r"(?mi)^(IDENTITY|SPEECH STYLE|RULES|RESPONSE STYLE)\s*:"
+    pattern = r"(?mi)^(IDENTITY|SPEECH STYLE|BEHAVIORAL TRIGGERS|RULES|RESPONSE STYLE)\s*:"
     parts = re.split(pattern, desc)
 
     result: Dict[str, str] = {"raw": desc}
@@ -215,7 +237,8 @@ def load_descriptions_from_file(path: str) -> Dict[str, str]:
 # ---------------------------------------------------------------------------
 
 chroma_col = None
-ollama_model: str = "llama3:latest"   # overridden by --model
+groq_model:  str = "qwen/qwen3-32b"   # overridden by --model
+groq_client: OpenAI                             # initialised in main()
 
 # ---------------------------------------------------------------------------
 # RAG helpers (identical to chatbot_server.py)
@@ -366,26 +389,62 @@ def retrieve_scene_examples(
 
 
 # ---------------------------------------------------------------------------
-# Generation — Ollama streaming via background thread + queue
+# Generation — Groq streaming via background thread + queue
 # ---------------------------------------------------------------------------
 
-def _ollama_stream_thread(
+def _groq_stream_thread(
     model_name: str,
     messages: List[Dict],
     out_q: "thread_queue.Queue[Optional[str]]",
 ) -> None:
     """Runs in a background thread.
 
-    Streams tokens from Ollama and puts each chunk onto ``out_q``.
-    Puts ``None`` as a sentinel when the stream is exhausted or on error.
+    Collects the full Groq response first, strips all <think>…</think>
+    blocks and character-name prefixes via regex on the complete text,
+    then pushes the clean result onto *out_q* word-by-word so the client
+    still sees a progressive typing effect.
+
+    Previous approach streamed token-by-token with an in-flight state
+    machine, but Qwen3 inserts inline <think> tags mid-word (e.g.
+    ``Schr<think>ute</think>,``) which silently eats characters.
+    Cleaning the full text after generation avoids this entirely.
     """
     try:
-        for chunk in ollama.chat(model=model_name, messages=messages, stream=True):
-            content = chunk.message.content
+        stream = groq_client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            stream=True,
+        )
+        # ── Collect full response ────────────────────────────────────────────
+        raw = ""
+        for chunk in stream:
+            content = chunk.choices[0].delta.content
             if content:
-                out_q.put(content)
+                raw += content
+
+        # ── Clean up ─────────────────────────────────────────────────────────
+        # 1. Strip ALL <think>…</think> blocks (initial + any inline ones)
+        clean = re.sub(r"<think>[\s\S]*?</think>", "", raw)
+        # 2. Remove character-name prefix the model sometimes adds
+        #    e.g. "**Dwight Schrute**: …" or "Dwight: …"
+        clean = re.sub(r"^\s*\*{0,2}[\w\s']+\*{0,2}\s*:\s*", "", clean, count=1)
+        # 3. Strip asterisk formatting but keep the text inside.
+        #    The model uses *word* for emphasis — removing the content
+        #    destroys the sentence.  Just drop the marker characters.
+        clean = re.sub(r"\*{1,2}([^*]+)\*{1,2}", r"\1", clean)
+        # 4. Remove bracketed stage directions  e.g. [looks around]
+        clean = re.sub(r"\[[^\]]{1,60}\]", "", clean)
+        # 5. Collapse extra whitespace left by removals
+        clean = re.sub(r"  +", " ", clean).strip()
+
+        # ── Push word-by-word for typing effect ──────────────────────────────
+        if clean:
+            words = clean.split(" ")
+            for i, word in enumerate(words):
+                out_q.put(word + (" " if i < len(words) - 1 else ""))
+
     except Exception as exc:
-        out_q.put(f"\n[Ollama error: {exc}]")
+        out_q.put(f"\n[Groq error: {exc}]")
     finally:
         out_q.put(None)   # sentinel — tells the consumer we're done
 
@@ -396,7 +455,7 @@ async def stream_reply(
     history: List[Dict],
     user_msg: str,
 ) -> str:
-    """Build RAG-grounded prompt, stream Ollama response to the WebSocket client."""
+    """Build RAG-grounded prompt, stream Groq response to the WebSocket client."""
     show = SHOW_MAP.get(character, "a TV show")
     desc = CHARACTER_DESCRIPTIONS.get(character, f"You are {character}.")
 
@@ -432,6 +491,14 @@ async def stream_reply(
             parts += [f"CHARACTER: {sections['identity']}", ""]
         if "speech_style" in sections:
             parts += [f"SPEECH STYLE: {sections['speech_style']}", ""]
+        if "behavioral_triggers" in sections:
+            # Trigger pairs sit between speech style and hard constraints so
+            # the model sees them as active situational cues, not just rules.
+            parts += [
+                f"BEHAVIORAL TRIGGERS — when these situations arise, react exactly as described:",
+                sections["behavioral_triggers"],
+                "",
+            ]
         if "rules" in sections:
             # RULES get their own prominent block — models follow explicit
             # constraint lists much better than rules buried in prose.
@@ -462,28 +529,36 @@ async def stream_reply(
             "",
         ]
 
-    # Closing instruction — character-aware response length guidance
+    # Closing instruction — response style + hard format rules
     if has_sections and "response_style" in sections:
         parts.append(f"RESPONSE STYLE: {sections['response_style']}")
     else:
-        hint = _RESPONSE_STYLE_HINTS.get(
-            character,
-            f"Respond as {character} would — natural and in character.",
-        )
-        parts.append(hint)
+        parts.append(f"Respond as {character} would — natural and in character.")
+
+    parts += [
+        "",
+        "FORMAT RULES — non-negotiable:",
+        "- Output ONLY the words your character speaks out loud. Nothing else.",
+        "- Do NOT prefix with a character name (e.g. never write 'Dwight:' or '**Dwight**:').",
+        "- No stage directions, no action descriptions, no asterisks (e.g. never write *smiles* or [looks around]).",
+        "- Use natural spoken English with contractions (don't, can't, it's, I'm). Never sound robotic or like a list.",
+        "- This is a CHAT. 1-4 sentences. Reply directly to what was just said.",
+    ]
 
     system = "\n".join(parts)
 
     messages = [{"role": "system", "content": system}]
     messages.extend(history)
-    messages.append({"role": "user", "content": user_msg})
+    # /no_think suppresses Qwen3's <think> reasoning block for cleaner output.
+    # Added only to the API payload — not stored in history.
+    messages.append({"role": "user", "content": user_msg + " /no_think"})
 
     # Spin up producer thread; drain tokens via run_in_executor so the event
-    # loop stays free while waiting for the next chunk from Ollama.
+    # loop stays free while waiting for the next chunk from Groq.
     out_q: thread_queue.Queue[Optional[str]] = thread_queue.Queue()
     Thread(
-        target=_ollama_stream_thread,
-        args=(ollama_model, messages, out_q),
+        target=_groq_stream_thread,
+        args=(groq_model, messages, out_q),
         daemon=True,
     ).start()
 
@@ -505,7 +580,7 @@ async def stream_reply(
 # FastAPI app (identical routes to chatbot_server.py)
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="TV Character Chatbot (Ollama)")
+app = FastAPI(title="TV Character Chatbot (Groq)")
 
 app.add_middleware(
     CORSMiddleware,
@@ -514,29 +589,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-static_dir = Path(__file__).parent / "static"
-static_dir.mkdir(exist_ok=True)
-app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-
-
 @app.get("/health")
 async def health():
-    """Lightweight liveness probe used by start.sh and monitoring tools."""
+    """Lightweight liveness probe used by monitoring tools."""
     return {"status": "ok"}
-
-
-@app.get("/", response_class=HTMLResponse)
-async def index():
-    html_path = static_dir / "index.html"
-    if not html_path.exists():
-        return HTMLResponse("<h1>index.html not found in ./static/</h1>", status_code=404)
-    return HTMLResponse(html_path.read_text())
 
 
 @app.get("/characters")
 async def list_characters():
     grouped: Dict[str, List[str]] = {}
-    for char, show in SHOW_MAP.items():
+    for char in CHARACTER_DESCRIPTIONS:
+        show = SHOW_MAP.get(char, "Unknown")
         grouped.setdefault(show, []).append(char)
     return grouped
 
@@ -582,17 +645,31 @@ async def websocket_endpoint(ws: WebSocket):
 
 
 # ---------------------------------------------------------------------------
+# SPA static files — mounted LAST so all API routes above take priority.
+# html=True enables the SPA fallback: any unmatched path returns index.html
+# so React Router (or the root index) handles client-side navigation.
+# Only active when ./static/ exists (i.e. inside Docker / after npm build).
+# ---------------------------------------------------------------------------
+
+_static_dir = Path(__file__).parent / "static"
+if _static_dir.is_dir():
+    app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="spa")
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    global chroma_col, ollama_model, CHARACTER_DESCRIPTIONS
+    import os
+    load_dotenv()
+    global chroma_col, groq_model, groq_client, CHARACTER_DESCRIPTIONS, SHOW_MAP, CHROMA_SHOW_KEY
 
-    parser = argparse.ArgumentParser(description="TV Character Chatbot Server (Ollama)")
+    parser = argparse.ArgumentParser(description="TV Character Chatbot Server (Groq)")
     parser.add_argument(
-        "--model", default="llama3:latest",
-        help="Ollama model tag to use (default: llama3:latest). "
-             "Must already be pulled: ollama pull <model>",
+        "--model", default="qwen/qwen3-32b",
+        help="Groq model to use (default: qwen/qwen3-32b). "
+             "See https://console.groq.com/docs/models for available models.",
     )
     parser.add_argument(
         "--profiles", default="character_profiles.json", metavar="PATH",
@@ -607,7 +684,7 @@ def main() -> None:
     parser.add_argument("--port",         type=int, default=8001)
     args = parser.parse_args()
 
-    ollama_model = args.model
+    groq_model = args.model
 
     # ── Load character descriptions from JSON (default: character_profiles.json) ─
     profiles_path = args.profiles.strip() if args.profiles else ""
@@ -620,21 +697,15 @@ def main() -> None:
         try:
             file_descs = load_descriptions_from_file(profiles_path)
 
-            # Heuristic show assignment for characters not already in SHOW_MAP.
-            # Check the description text for known show identifiers.
-            _OFFICE_MARKERS = {"dunder mifflin", "the office", "scranton",
-                                "schrute farms", "regional manager", "beet"}
-
             overridden, kept = [], []
             for char, desc in file_descs.items():
                 CHARACTER_DESCRIPTIONS[char] = desc
                 overridden.append(char)
+                # Auto-derive show from the profile text if not already known
                 if char not in SHOW_MAP:
-                    desc_lower = desc.lower()
-                    if any(m in desc_lower for m in _OFFICE_MARKERS):
-                        SHOW_MAP[char] = "The Office"
-                    else:
-                        SHOW_MAP[char] = "The Big Bang Theory"
+                    inferred = _infer_show_from_description(desc)
+                    if inferred:
+                        SHOW_MAP[char] = inferred
 
             for char in CHARACTER_DESCRIPTIONS:
                 if char not in file_descs:
@@ -645,7 +716,6 @@ def main() -> None:
                 print(f"  Using built-in for: {kept}")
 
         except FileNotFoundError:
-            # File not found is fine when using the default path — just use built-ins
             print(
                 f"  '{profiles_path}' not found — using built-in descriptions.\n"
                 "  Run `python character_profiler.py --synthesize` to generate it."
@@ -654,30 +724,32 @@ def main() -> None:
             print(f"  WARNING: Could not parse '{profiles_path}': {exc}")
             print("  Falling back to built-in descriptions.")
 
-    # Verify Ollama is reachable and the model is available
-    print(f"Checking Ollama model '{ollama_model}' ...")
-    try:
-        available = [m.model for m in ollama.list().models]
-        if not any(ollama_model in m for m in available):
-            print(
-                f"  WARNING: '{ollama_model}' not found in local Ollama models.\n"
-                f"  Run: ollama pull {ollama_model}\n"
-                f"  Available: {available}"
-            )
-        else:
-            print(f"  Model '{ollama_model}' is available.")
-    except Exception as exc:
-        print(f"  WARNING: Could not reach Ollama — is it running? ({exc})")
-        print("  Start Ollama with: ollama serve")
+    # ── Initialise Groq client ────────────────────────────────────────────────
+    api_key = os.environ.get("GROQ_API_KEY", "")
+    if not api_key:
+        raise SystemExit(
+            "ERROR: GROQ_API_KEY environment variable is not set.\n"
+            "Get a free key at https://console.groq.com and set it with:\n"
+            "  export GROQ_API_KEY=gsk_..."
+        )
+    groq_client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.groq.com/openai/v1",
+    )
+    print(f"Groq client ready — model: {groq_model}")
 
     # Connect to ChromaDB
     print(f"\nConnecting to ChromaDB at {args.persist_dir} ...")
     chroma_client = chromadb.PersistentClient(path=args.persist_dir)
     chroma_col    = chroma_client.get_collection(args.collection)
-    print(f"  Collection '{args.collection}': {chroma_col.count()} docs\n")
+    print(f"  Collection '{args.collection}': {chroma_col.count()} docs")
 
-    print(f"Starting Ollama chatbot server at http://{args.host}:{args.port}")
-    print(f"  Model : {ollama_model}")
+    # Auto-derive show→collection-key mapping from ChromaDB metadata
+    CHROMA_SHOW_KEY = _discover_chroma_show_keys(chroma_col)
+    print(f"  Discovered show keys: {CHROMA_SHOW_KEY}\n")
+
+    print(f"Starting server at http://{args.host}:{args.port}")
+    print(f"  Model : {groq_model}")
     print(f"  RAG   : ChromaDB ({args.persist_dir})\n")
     uvicorn.run(app, host=args.host, port=args.port)
 

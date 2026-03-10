@@ -2,30 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Ensure the full viewport is dark — prevents white bars beside the centred chat column */
+/* ── Root reset ─────────────────────────────────────────────────────────── */
 @layer base {
   html, body, #root {
-    background-color: #1a264b;
+    background-color: #070709;
     height: 100%;
     margin: 0;
     padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Custom scrollbar — avoids needing a Tailwind plugin */
 @layer utilities {
+
+  /* ── Dot-grid landing background — Vercel-style ──────────────────────── */
+  .dot-grid {
+    background-image:
+      radial-gradient(ellipse 70% 40% at 50% 0%, rgba(124, 58, 237, 0.13) 0%, transparent 70%),
+      radial-gradient(circle, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    background-size: auto, 26px 26px;
+  }
+
+  /* ── Gradient headline text ──────────────────────────────────────────── */
+  .gradient-text {
+    background: linear-gradient(135deg, #a78bfa 0%, #818cf8 42%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Pixel-art ring around character frames ──────────────────────────── */
+  /* Set  --ring-color  on the element; defaults to violet                  */
+  .pixel-ring {
+    position: relative;
+  }
+  .pixel-ring::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    border: 2px solid var(--ring-color, #7c3aed);
+    opacity: 0.28;
+    transition: opacity 0.18s ease, box-shadow 0.18s ease;
+    pointer-events: none;
+  }
+  .pixel-ring:hover::after {
+    opacity: 1;
+    box-shadow: 0 0 22px var(--ring-color, #7c3aed);
+  }
+
+  /* ── Custom scrollbar ────────────────────────────────────────────────── */
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: #334155 transparent;
+    scrollbar-color: #2e2e38 transparent;
   }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  .scrollbar-thin::-webkit-scrollbar       { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #334155;
+    background: #2e2e38;
     border-radius: 2px;
   }
+
+  /* ── Frosted-glass input footer ──────────────────────────────────────── */
+  .input-frosted {
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    background: rgba(14, 14, 18, 0.88);
+  }
+
 }

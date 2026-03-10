@@ -38,70 +38,87 @@ export default function InputArea({ onSend, onStop, onClear, isStreaming, disabl
 
   const busy = disabled || isStreaming
 
+  const placeholder = disabled
+    ? 'Connecting…'
+    : isStreaming
+      ? 'Generating…'
+      : 'Message… (Shift+Enter for newline)'
+
   return (
-    <div className="flex items-end gap-2.5 px-5 py-3.5 bg-app-surface border-t border-app-border shrink-0">
+    <div className="input-frosted border-t border-app-border shrink-0 px-4 py-3">
+      <div className="flex items-end gap-2.5">
 
-      {/* Clear / reset history */}
-      <button
-        onClick={onClear}
-        title="Clear chat"
-        className="
-          w-11 h-11 flex items-center justify-center rounded-xl
-          border border-app-border text-slate-500
-          hover:text-slate-100 hover:border-slate-500
-          transition-colors shrink-0 text-lg
-        "
-      >
-        🗑
-      </button>
-
-      {/* Message input */}
-      <textarea
-        ref={textareaRef}
-        rows={1}
-        placeholder={disabled ? 'Connecting…' : isStreaming ? 'Waiting for reply…' : 'Say something… (Shift+Enter for newline)'}
-        disabled={busy}
-        onKeyDown={handleKeyDown}
-        onInput={handleInput}
-        className="
-          flex-1 bg-app-surface2 text-slate-100 border border-app-border
-          rounded-xl px-3.5 py-2.5 text-sm font-sans resize-none outline-none
-          max-h-[130px] leading-relaxed placeholder-slate-600
-          focus:border-violet-500
-          disabled:opacity-40 disabled:cursor-not-allowed
-          transition-colors
-        "
-      />
-
-      {/* Stop (visible while streaming) / Send (otherwise) */}
-      {isStreaming ? (
+        {/* Clear / reset history */}
         <button
-          onClick={onStop}
-          title="Stop generating"
+          onClick={onClear}
+          title="Clear chat"
           className="
-            w-11 h-11 flex items-center justify-center rounded-xl
-            bg-red-600 hover:bg-red-500
-            text-white text-base transition-colors shrink-0
+            w-9 h-9 flex items-center justify-center rounded-xl
+            text-slate-600 hover:text-slate-400
+            border border-transparent hover:border-app-border
+            transition-colors shrink-0 text-base
           "
         >
-          ⏹
+          🗑
         </button>
-      ) : (
-        <button
-          onClick={submit}
+
+        {/* Message input */}
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          placeholder={placeholder}
           disabled={busy}
-          title="Send (Enter)"
+          onKeyDown={handleKeyDown}
+          onInput={handleInput}
           className="
-            w-11 h-11 flex items-center justify-center rounded-xl
-            bg-violet-600 hover:bg-violet-500
-            disabled:opacity-40 disabled:cursor-not-allowed
-            text-white text-lg transition-colors shrink-0
+            flex-1 bg-app-surface2 text-slate-100 border border-app-border-hi
+            rounded-xl px-3.5 py-2.5 text-sm font-sans resize-none outline-none
+            max-h-[130px] leading-relaxed placeholder-slate-700
+            focus:border-violet-600/60 focus:ring-1 focus:ring-violet-600/20
+            disabled:opacity-30 disabled:cursor-not-allowed
+            transition-all duration-150
           "
-        >
-          ➤
-        </button>
-      )}
+        />
 
+        {/* Stop (visible while streaming) / Send button */}
+        {isStreaming ? (
+          <button
+            onClick={onStop}
+            title="Stop generating"
+            className="
+              w-9 h-9 flex items-center justify-center rounded-xl
+              bg-red-700 hover:bg-red-600
+              text-white text-sm font-bold transition-colors shrink-0
+              border border-red-600/40
+            "
+          >
+            ■
+          </button>
+        ) : (
+          <button
+            onClick={submit}
+            disabled={busy}
+            title="Send (Enter)"
+            className="
+              w-9 h-9 flex items-center justify-center rounded-xl
+              bg-violet-700 hover:bg-violet-600
+              disabled:opacity-30 disabled:cursor-not-allowed
+              text-white text-base transition-colors shrink-0
+              border border-violet-500/30
+            "
+          >
+            ↑
+          </button>
+        )}
+
+      </div>
+
+      {/* Keyboard hint */}
+      {!disabled && !isStreaming && (
+        <p className="text-[10px] text-slate-700 text-center mt-2 select-none">
+          Enter to send &nbsp;·&nbsp; Shift+Enter for newline
+        </p>
+      )}
     </div>
   )
 }
