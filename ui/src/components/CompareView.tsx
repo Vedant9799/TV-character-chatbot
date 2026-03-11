@@ -112,7 +112,9 @@ function PanelHeader({
 export default function CompareView({ initialCharacter, onBack }: CompareViewProps) {
 
   // Resolve backend hosts from env vars or fall back to localhost defaults
-  const wsProto   = location.protocol === 'https:' ? 'wss' : 'ws'
+  const isHttps   = location.protocol === 'https:'
+  const wsProto   = isHttps ? 'wss' : 'ws'
+  const httpProto = isHttps ? 'https' : 'http'
   const leftHost  = (import.meta.env.VITE_COMPARE_A as string | undefined) ?? 'localhost:8001'
   const rightHost = (import.meta.env.VITE_COMPARE_B as string | undefined) ?? 'localhost:8002'
   const leftWs    = `${wsProto}://${leftHost}/ws`
@@ -125,7 +127,7 @@ export default function CompareView({ initialCharacter, onBack }: CompareViewPro
   useEffect(() => {
     const fetchModel = async (host: string, setter: (s: string) => void) => {
       try {
-        const res  = await fetch(`http://${host}/health`)
+        const res  = await fetch(`${httpProto}://${host}/health`)
         const data = await res.json() as { status: string; model?: string }
         setter(data.model ?? host)
       } catch {
@@ -134,7 +136,7 @@ export default function CompareView({ initialCharacter, onBack }: CompareViewPro
     }
     fetchModel(leftHost,  setLeftModel)
     fetchModel(rightHost, setRightModel)
-  }, [leftHost, rightHost])
+  }, [leftHost, rightHost, httpProto])
 
   // ── Two independent WebSocket + chat pairs ─────────────────────────────
 

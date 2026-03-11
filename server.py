@@ -36,9 +36,24 @@ from pathlib import Path
 from threading import Thread
 from typing import Dict, List, Optional
 
-import chromadb
 import numpy as np
 import uvicorn
+
+# ChromaDB — optional; only required when --backend chroma (default)
+try:
+    import chromadb as _chromadb_mod
+    _CHROMADB_AVAILABLE = True
+except ImportError:
+    _CHROMADB_AVAILABLE = False
+
+# Supabase + sentence-transformers — optional; only required when --backend supabase
+try:
+    from supabase import Client as _SupabaseClient
+    from supabase import create_client as _create_supabase_client
+    from sentence_transformers import SentenceTransformer as _SentenceTransformer
+    _SUPABASE_AVAILABLE = True
+except ImportError:
+    _SUPABASE_AVAILABLE = False
 from dotenv import load_dotenv
 from openai import OpenAI
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -55,9 +70,13 @@ CHARACTER_DESCRIPTIONS: Dict[str, str] = {}
 # {character_name: show_name} — derived from description text at startup
 SHOW_MAP: Dict[str, str] = {}
 
-# Show display name → ChromaDB collection key.  Auto-populated at startup by
-# scanning collection metadata (see _discover_chroma_show_keys()).
-CHROMA_SHOW_KEY: Dict[str, str] = {}
+# Show display name → database show key (same values used by both ChromaDB and
+# Supabase backends).  Pre-seeded with the two known shows so the Supabase path
+# works without a ChromaDB collection.  ChromaDB init may add discovered keys.
+CHROMA_SHOW_KEY: Dict[str, str] = {
+    "The Big Bang Theory": "big_bang_theory",
+    "The Office":          "the_office",
+}
 
 
 def _discover_chroma_show_keys(col) -> Dict[str, str]:
@@ -188,7 +207,12 @@ def load_descriptions_from_file(path: str) -> Dict[str, str]:
 
 chroma_col = None
 groq_model:  str = "qwen/qwen3-32b"   # overridden by --model
-groq_client: OpenAI                             # initialised in main()
+groq_client: OpenAI                   # initialised in main()
+
+# Supabase-backend globals (None when falling back to chroma)
+_rag_backend:    str    = "supabase"  # "chroma" | "supabase", resolved at startup
+_supabase_client        = None        # supabase.Client instance
+_sentence_model         = None        # SentenceTransformer instance
 
 # ---------------------------------------------------------------------------
 # RAG helpers (identical to chatbot_server.py)
@@ -339,6 +363,92 @@ def retrieve_scene_examples(
 
 
 # ---------------------------------------------------------------------------
+# RAG — Supabase pgvector backend
+# ---------------------------------------------------------------------------
+
+def _embed_query(query: str) -> List[float]:
+    """Embed a single query string using the sentence-transformers model."""
+    emb = _sentence_model.encode(query, convert_to_numpy=True, normalize_embeddings=True)
+    return emb.tolist()
+
+
+def retrieve_from_supabase(
+    character: str, query: str, n_results: int = 4
+) -> "tuple[str, str]":
+    """Two-pass RAG pipeline using Supabase pgvector.
+
+    Mirrors retrieve_scene_examples() exactly — same pass structure, same
+    deduplication logic, same return format — but queries the Supabase
+    ``tv_scenes`` table via the ``match_tv_scenes`` RPC instead of ChromaDB.
+
+    Results from the RPC are already ordered by cosine distance (nearest
+    first), so we do simple top-N selection after deduplication rather than
+    MMR (document embeddings are not returned by the RPC).
+    """
+    CANON_POOL    = 20
+    EXEMPLAR_POOL = 10
+    CANON_N       = n_results - 1   # 3 canon scenes
+    EXEMPLAR_N    = 2               # 2 style exemplars
+
+    show        = SHOW_MAP.get(character, "")
+    db_show_key = CHROMA_SHOW_KEY.get(show, "")
+    char_col    = f"has_{character.lower()}"   # e.g. "has_sheldon"
+
+    query_emb = _embed_query(query)
+
+    def _rpc(doc_type: str, pool: int) -> list:
+        try:
+            resp = _supabase_client.rpc("match_tv_scenes", {
+                "query_embedding": query_emb,
+                "filter_show":     db_show_key,
+                "filter_doc_type": doc_type,
+                "filter_char_col": char_col,
+                "match_count":     pool,
+            }).execute()
+            return resp.data or []
+        except Exception as exc:
+            print(f"[RAG/Supabase] {doc_type} query error: {exc}")
+            return []
+
+    # ── Pass 1: canon scenes ─────────────────────────────────────────────────
+    canon_rows = _rpc("canon", CANON_POOL)
+    seen: set = set()
+    canon_docs: List[str] = []
+    for row in canon_rows:
+        key = (row.get("season"), row.get("episode"), row.get("scene"))
+        if key in seen:
+            continue
+        seen.add(key)
+        canon_docs.append(row["content"])
+    canon_selected = canon_docs[:CANON_N]
+
+    # ── Pass 2: style exemplars ──────────────────────────────────────────────
+    ex_rows = _rpc("exemplar", EXEMPLAR_POOL)
+    ex_seen: set = set()
+    ex_docs: List[str] = []
+    for row in ex_rows:
+        key = (row.get("season"), row.get("episode"), row.get("scene"), row.get("turn_idx"))
+        if key in ex_seen:
+            continue
+        ex_seen.add(key)
+        ex_docs.append(row["content"])
+    exemplar_selected = ex_docs[:EXEMPLAR_N]
+
+    print(
+        f"[RAG/Supabase] {character}: "
+        f"canon pool={len(canon_rows)} → top={len(canon_selected)} | "
+        f"exemplar pool={len(ex_rows)} → top={len(exemplar_selected)}"
+    )
+
+    if not canon_selected and not exemplar_selected:
+        print(f"[RAG/Supabase] No scenes found for character='{character}'")
+
+    canon_text    = "\n\n---\n\n".join(canon_selected)
+    exemplar_text = "\n\n---\n\n".join(exemplar_selected)
+    return canon_text, exemplar_text
+
+
+# ---------------------------------------------------------------------------
 # Generation — Groq streaming via background thread + queue
 # ---------------------------------------------------------------------------
 
@@ -415,9 +525,14 @@ async def stream_reply(
     )
     rag_query = f"{last_bot_reply} {user_msg}".strip() if last_bot_reply else user_msg
 
-    canon_text, exemplar_text = await asyncio.to_thread(
-        retrieve_scene_examples, character, rag_query
-    )
+    if _rag_backend == "supabase":
+        canon_text, exemplar_text = await asyncio.to_thread(
+            retrieve_from_supabase, character, rag_query
+        )
+    else:
+        canon_text, exemplar_text = await asyncio.to_thread(
+            retrieve_scene_examples, character, rag_query
+        )
 
     # ── Parse profile into named sections (handles both new 4-section format
     #    from character_profiler.py) ──
@@ -614,7 +729,8 @@ if _static_dir.is_dir():
 def main() -> None:
     import os
     load_dotenv()
-    global chroma_col, groq_model, groq_client, CHARACTER_DESCRIPTIONS, SHOW_MAP, CHROMA_SHOW_KEY
+    global chroma_col, groq_model, groq_client, CHARACTER_DESCRIPTIONS, SHOW_MAP, \
+           CHROMA_SHOW_KEY, _rag_backend, _supabase_client, _sentence_model
 
     parser = argparse.ArgumentParser(description="TV Character Chatbot Server (Groq)")
     parser.add_argument(
@@ -627,13 +743,20 @@ def main() -> None:
         help="Path to character_profiles.json produced by character_profiler.py. "
              "Defaults to 'character_profiles.json' in the current directory.",
     )
+    parser.add_argument(
+        "--backend", default="supabase", choices=["chroma", "supabase"],
+        help="RAG vector backend. Defaults to 'supabase' and falls back to "
+             "'chroma' if Supabase is unavailable. Supabase requires "
+             "SUPABASE_URL and SUPABASE_SERVICE_KEY.",
+    )
     parser.add_argument("--persist-dir",  default="./chroma_db")
     parser.add_argument("--collection",   default="tv_scenes")
     parser.add_argument("--host",         default="0.0.0.0")
     parser.add_argument("--port",         type=int, default=8001)
     args = parser.parse_args()
 
-    groq_model = args.model
+    groq_model   = args.model
+    _rag_backend = args.backend
 
     # ── Load character descriptions from JSON ────────────────────────────────
     print(f"Loading character descriptions from '{args.profiles}' ...")
@@ -662,19 +785,71 @@ def main() -> None:
     )
     print(f"Groq client ready — model: {groq_model}")
 
-    # Connect to ChromaDB
-    print(f"\nConnecting to ChromaDB at {args.persist_dir} ...")
-    chroma_client = chromadb.PersistentClient(path=args.persist_dir)
-    chroma_col    = chroma_client.get_collection(args.collection)
-    print(f"  Collection '{args.collection}': {chroma_col.count()} docs")
+    # ── Initialise RAG backend ────────────────────────────────────────────────
+    def _init_supabase() -> tuple[bool, str]:
+        global _supabase_client, _sentence_model, _rag_backend
+        if not _SUPABASE_AVAILABLE:
+            return False, "Supabase packages are not installed"
 
-    # Auto-derive show→collection-key mapping from ChromaDB metadata
-    CHROMA_SHOW_KEY = _discover_chroma_show_keys(chroma_col)
-    print(f"  Discovered show keys: {CHROMA_SHOW_KEY}\n")
+        supa_url = os.environ.get("SUPABASE_URL", "").strip()
+        supa_key = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
+        if not supa_url or not supa_key:
+            return False, "SUPABASE_URL or SUPABASE_SERVICE_KEY is missing"
 
-    print(f"Starting server at http://{args.host}:{args.port}")
-    print(f"  Model : {groq_model}")
-    print(f"  RAG   : ChromaDB ({args.persist_dir})\n")
+        print(f"\nConnecting to Supabase ({supa_url}) ...")
+        _supabase_client = _create_supabase_client(supa_url, supa_key)
+        print("  Connected.")
+
+        print("Loading sentence-transformers model (all-MiniLM-L6-v2) ...")
+        _sentence_model = _SentenceTransformer("all-MiniLM-L6-v2")
+        print(f"  Embedding dim: {_sentence_model.get_sentence_embedding_dimension()}")
+        print(f"  Show keys: {CHROMA_SHOW_KEY}\n")
+
+        _rag_backend = "supabase"
+        print(f"Starting server at http://{args.host}:{args.port}")
+        print(f"  Model : {groq_model}")
+        print("  RAG   : Supabase pgvector\n")
+        return True, ""
+
+    def _init_chroma() -> tuple[bool, str]:
+        global chroma_col, CHROMA_SHOW_KEY, _rag_backend
+        if not _CHROMADB_AVAILABLE:
+            return False, "chromadb is not installed"
+
+        print(f"\nConnecting to ChromaDB at {args.persist_dir} ...")
+        chroma_client = _chromadb_mod.PersistentClient(path=args.persist_dir)
+        chroma_col = chroma_client.get_collection(args.collection)
+        print(f"  Collection '{args.collection}': {chroma_col.count()} docs")
+
+        discovered = _discover_chroma_show_keys(chroma_col)
+        CHROMA_SHOW_KEY.update(discovered)
+        print(f"  Show keys: {CHROMA_SHOW_KEY}\n")
+
+        _rag_backend = "chroma"
+        print(f"Starting server at http://{args.host}:{args.port}")
+        print(f"  Model : {groq_model}")
+        print(f"  RAG   : ChromaDB ({args.persist_dir})\n")
+        return True, ""
+
+    if args.backend == "supabase":
+        ok, reason = _init_supabase()
+        if not ok:
+            print(f"Supabase unavailable, falling back to ChromaDB: {reason}")
+            ok, chroma_reason = _init_chroma()
+            if not ok:
+                raise SystemExit(
+                    "ERROR: Supabase unavailable and ChromaDB fallback failed.\n"
+                    f"Supabase: {reason}\n"
+                    f"ChromaDB: {chroma_reason}"
+                )
+    else:
+        ok, reason = _init_chroma()
+        if not ok:
+            raise SystemExit(
+                "ERROR: ChromaDB backend is unavailable.\n"
+                f"Reason: {reason}"
+            )
+
     uvicorn.run(app, host=args.host, port=args.port)
 
 

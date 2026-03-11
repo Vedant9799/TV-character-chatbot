@@ -26,7 +26,9 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../static',  // FastAPI serves this folder in production
+    // Vercel builds from ui/ and expects output in ui/dist (configured in vercel.json).
+    // For local dev, `npm run dev` uses the Vite dev server with proxy — no build needed.
+    outDir: 'dist',
     emptyOutDir: true,
   },
 })

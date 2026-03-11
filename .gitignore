@@ -211,3 +211,6 @@ chroma_db
 ui/node_modules
 .claude
 .logs
+# Build outputs — Vercel builds ui/dist, not tracked in git
+ui/dist
+static/
