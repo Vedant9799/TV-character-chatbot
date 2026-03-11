@@ -12,7 +12,7 @@ services:
     name: tv-chatbot-qwen
     runtime: python
     pythonVersion: "3.13"
-    buildCommand: pip install -r requirements.txt
+    buildCommand: npm --prefix ui ci && npm --prefix ui run build && mkdir -p static && cp -r ui/dist/. static/ && pip install -r requirements.txt
     startCommand: python server.py --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     autoDeploy: true
@@ -31,7 +31,7 @@ services:
     name: tv-chatbot-llama
     runtime: python
     pythonVersion: "3.13"
-    buildCommand: pip install -r requirements.txt
+    buildCommand: npm --prefix ui ci && npm --prefix ui run build && mkdir -p static && cp -r ui/dist/. static/ && pip install -r requirements.txt
     startCommand: python server_llama.py --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     autoDeploy: true
