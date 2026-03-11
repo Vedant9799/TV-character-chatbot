@@ -1,0 +1,20 @@
+# render.yaml — Render Infrastructure-as-Code
+# Docs: https://render.com/docs/yaml-spec
+
+services:
+
+  - type: web
+    name: tv-character-chatbot
+    runtime: python
+    pythonVersion: "3.13"
+    buildCommand: npm --prefix ui ci && npm --prefix ui run build && mkdir -p static && cp -r ui/dist/. static/ && pip install -r requirements.txt
+    startCommand: python server_llama.py --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false

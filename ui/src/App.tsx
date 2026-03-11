@@ -1,45 +1,29 @@
-import { useWebSocket } from './hooks/useWebSocket'
-import { useChat } from './hooks/useChat'
-import Header from './components/Header'
-import CharacterBanner from './components/CharacterBanner'
-import ChatArea from './components/ChatArea'
-import InputArea from './components/InputArea'
+import { useState } from 'react'
+import { DEFAULT_CHARACTER } from './constants/characters'
+import LandingPage from './components/LandingPage'
+import ChatView    from './components/ChatView'
+
+type View = 'landing' | 'chat'
 
 export default function App() {
-  // Resolve WebSocket URL — in dev, Vite proxies /ws → localhost:8000
-  const wsUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
+  const [view,              setView]              = useState<View>('landing')
+  const [selectedCharacter, setSelectedCharacter] = useState(DEFAULT_CHARACTER)
 
-  const { send, status, lastMessage } = useWebSocket(wsUrl)
-  const {
-    messages,
-    isStreaming,
-    activeCharacter,
-    setCharacter,
-    sendMessage,
-    clearChat,
-  } = useChat(send, lastMessage, status)
+  const handleSelectCharacter = (char: string) => {
+    setSelectedCharacter(char)
+    setView('chat')
+  }
+
+  const handleBack = () => setView('landing')
 
   return (
-    <div className="flex flex-col h-dvh max-w-3xl mx-auto bg-app-bg text-slate-100">
-      <Header
-        activeCharacter={activeCharacter}
-        onCharacterChange={setCharacter}
-        status={status}
-      />
-
-      <CharacterBanner character={activeCharacter} />
-
-      <ChatArea
-        messages={messages}
-        activeCharacter={activeCharacter}
-      />
-
-      <InputArea
-        onSend={sendMessage}
-        onClear={clearChat}
-        isStreaming={isStreaming}
-        disabled={status !== 'connected'}
-      />
+    <div className="min-h-dvh bg-app-bg text-slate-100">
+      {view === 'landing' && (
+        <LandingPage onSelectCharacter={handleSelectCharacter} />
+      )}
+      {view === 'chat' && (
+        <ChatView initialCharacter={selectedCharacter} onBack={handleBack} />
+      )}
     </div>
   )
 }

@@ -4,18 +4,19 @@ import type { ConnectionStatus } from '../types'
 interface UseWebSocketReturn {
   send: (payload: object) => void
   status: ConnectionStatus
-  lastMessage: MessageEvent | null
+  /** Ref whose `.current` is called directly from ws.onmessage —
+   *  bypasses React state so no messages are lost to batching. */
+  onMessageRef: React.MutableRefObject<((evt: MessageEvent) => void) | null>
 }
 
 export function useWebSocket(url: string): UseWebSocketReturn {
-  const [status, setStatus]           = useState<ConnectionStatus>('connecting')
-  const [lastMessage, setLastMessage] = useState<MessageEvent | null>(null)
+  const [status, setStatus] = useState<ConnectionStatus>('connecting')
 
   const wsRef          = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>()
+  const onMessageRef   = useRef<((evt: MessageEvent) => void) | null>(null)
 
   const connect = useCallback(() => {
-    // Avoid double-connecting
     if (wsRef.current?.readyState === WebSocket.OPEN) return
 
     const ws = new WebSocket(url)
@@ -23,12 +24,13 @@ export function useWebSocket(url: string): UseWebSocketReturn {
     setStatus('connecting')
 
     ws.onopen  = () => setStatus('connected')
-    ws.onerror = () => ws.close()                          // let onclose handle retry
+    ws.onerror = () => ws.close()
     ws.onclose = () => {
       setStatus('disconnected')
-      reconnectTimer.current = setTimeout(connect, 3_000)  // auto-reconnect
+      reconnectTimer.current = setTimeout(connect, 3_000)
     }
-    ws.onmessage = (evt) => setLastMessage(evt)
+    // Call the ref callback directly — no React state in the hot path.
+    ws.onmessage = (evt) => onMessageRef.current?.(evt)
   }, [url])
 
   useEffect(() => {
@@ -45,5 +47,5 @@ export function useWebSocket(url: string): UseWebSocketReturn {
     }
   }, [])
 
-  return { send, status, lastMessage }
+  return { send, status, onMessageRef }
 }

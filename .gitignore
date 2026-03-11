@@ -207,5 +207,10 @@ marimo/_lsp/
 __marimo__/
 
 *.csv
-/chroma_db
+chroma_db
 ui/node_modules
+.claude
+.logs
+# Build outputs — Vercel builds ui/dist, not tracked in git
+ui/dist
+static/
