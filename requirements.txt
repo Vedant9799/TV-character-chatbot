@@ -15,7 +15,9 @@ uvicorn==0.41.0
 websockets==16.0
 
 # ── LLM / Groq client ─────────────────────────────────────────────────────────
-openai>=1.0.0
+# Pinned to avoid resolving jiter to a version without pre-built Linux wheels.
+openai==1.56.0
+jiter==0.8.0
 
 # ── Supabase backend ──────────────────────────────────────────────────────────
 supabase>=2.0.0

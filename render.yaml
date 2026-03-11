@@ -11,6 +11,7 @@ services:
   - type: web
     name: tv-chatbot-qwen
     runtime: python
+    pythonVersion: "3.11"
     buildCommand: pip install -r requirements.txt
     startCommand: python server.py --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
@@ -29,6 +30,7 @@ services:
   - type: web
     name: tv-chatbot-llama
     runtime: python
+    pythonVersion: "3.11"
     buildCommand: pip install -r requirements.txt
     startCommand: python server_llama.py --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
