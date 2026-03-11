@@ -141,19 +141,17 @@ export default function LandingPage({ onSelectCharacter, onCompare }: LandingPag
 
         <h1 className="text-5xl sm:text-7xl font-extrabold text-white leading-none tracking-tight">
           TV Character
-          <br />
-          <span className="gradient-text">Chatbot</span>
+          <span className="gradient-text"> Chatbot</span>
         </h1>
 
-        <p className="mt-6 text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">
-          Chat with your favourite TV characters. Replies grounded in real
-          dialogue via RAG.
-        </p>
+        {/* <p className="mt-6 text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">
+          Chat with your favourite TV characters. Replies grounded in real dialogue via RAG.
+        </p> */}
       </div>
 
       {/* ── Character grid ────────────────────────────────────────────────── */}
-      <div className="w-full animate-scaleIn" style={{ maxWidth: '680px' }}>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-5 sm:gap-6">
+      <div className="w-full animate-scaleIn" style={{ maxWidth: '860px' }}>
+        <div className="grid grid-cols-3 gap-6 sm:gap-10">
           {entries.map(([name, meta]) => (
             <CharacterCard
               key={name}
@@ -182,22 +180,8 @@ export default function LandingPage({ onSelectCharacter, onCompare }: LandingPag
             <span className="text-slate-600 text-xs">→</span>
           </button>
 
-          <p className="text-[10px] text-slate-700 text-center">
-            Run two backends simultaneously and compare responses
-          </p>
         </div>
 
-        {/* Drop-in hint */}
-        <p className="mt-8 text-center font-pixel text-[7px] text-slate-800 leading-relaxed select-none">
-          DROP PORTRAITS INTO&nbsp;
-          <span className="text-slate-600">ui/public/characters/</span>
-          &nbsp;TO REPLACE EMOJI
-        </p>
-      </div>
-
-      {/* ── Footer ────────────────────────────────────────────────────────── */}
-      <div className="mt-12 font-pixel text-[7px] text-slate-800 text-center select-none">
-        TBBT &nbsp;·&nbsp; THE OFFICE &nbsp;·&nbsp; LOCAL LLM &nbsp;·&nbsp; RAG
       </div>
 
     </div>

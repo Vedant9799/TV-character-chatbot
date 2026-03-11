@@ -11,7 +11,6 @@ interface ChatAreaProps {
 
 const STARTER_PROMPTS: Record<string, string[]> = {
   Sheldon: ['Explain string theory simply.', "What's wrong with the way most people think?", 'Rate my IQ.'],
-  Leonard: ["What's it like living with Sheldon?", 'Recommend a physics experiment.', 'Tell me about your mom.'],
   Michael: ['Give me a motivational speech.', "What's the best prank you've pulled?", 'Why are you the best boss?'],
   Dwight:  ['What are beets good for?', 'How do I become a better employee?', 'Tell me about Schrute Farms.'],
 }

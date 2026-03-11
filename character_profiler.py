@@ -8,7 +8,7 @@ descriptions (IDENTITY, SPEECH STYLE, BEHAVIORAL TRIGGERS, RULES, RESPONSE
 STYLE) from its knowledge of the characters.
 
 Usage:
-  python character_profiler.py --characters "Sheldon:The Big Bang Theory,Leonard:The Big Bang Theory"
+  python character_profiler.py --characters "Sheldon:The Big Bang Theory,Michael:The Office"
   python character_profiler.py --characters "Michael:The Office,Dwight:The Office" --model llama-3.3-70b-versatile
   python character_profiler.py --characters "Sheldon:The Big Bang Theory" --output my_profiles.json
 
@@ -32,10 +32,10 @@ _DEFAULT_GROQ_MODEL    = "openai/gpt-oss-safeguard-20b"
 # Default characters when --characters is omitted
 _DEFAULT_CHARACTERS: dict = {
     "Sheldon": "The Big Bang Theory",
-    "Leonard": "The Big Bang Theory",
     "Michael": "The Office",
     "Dwight":  "The Office",
 }
+
 
 # ── Synthesis LLM settings ─────────────────────────────────────────────────
 _SYNTHESIS_TEMPERATURE = 0.7
@@ -166,8 +166,8 @@ def _build_cli() -> argparse.ArgumentParser:
         help=(
             "Comma-separated 'Character:Show' pairs to profile. "
             "E.g. 'Sheldon:The Big Bang Theory,Michael:The Office'. "
-            "If omitted, profiles the 4 default characters "
-            "(Sheldon, Leonard, Michael, Dwight)."
+            "If omitted, profiles the 3 default characters "
+            "(Sheldon, Michael, Dwight)."
         ),
     )
     p.add_argument(

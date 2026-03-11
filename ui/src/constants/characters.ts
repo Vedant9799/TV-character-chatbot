@@ -7,12 +7,6 @@ export const CHARACTERS: Record<string, CharacterMeta> = {
     color: '#3b82f6', description: 'Theoretical physicist · IQ 187',
     image: '/portraits/sheldon.jpg',
   },
-  Leonard: {
-    emoji: '🔭', show: 'The Big Bang Theory', supported: true,
-    color: '#f59e0b', description: 'Experimental physicist · Sheldon\'s roommate',
-    image: '/portraits/leonard.jpg',
-  },
-
   // ── The Office ──────────────────────────────────────────────────────────
   Michael: {
     emoji: '👔', show: 'The Office', supported: true,
