@@ -1,32 +1,33 @@
 # Runtime dependencies for the FastAPI server (server.py / server_llama.py).
+# All versions confirmed working with Python 3.13.5 (local venv).
 # This is what Render installs — kept intentionally slim.
 #
 # For local data-ingestion work (build_supabase.py, build_chromadb.py,
-# character_profiler.py) install the dev extras too:
+# character_profiler.py) also install:
 #   pip install -r requirements-dev.txt
 
 # ── CPU-only PyTorch wheel ─────────────────────────────────────────────────────
-# Saves ~1.8 GB vs the default GPU build. Must come before torch/torchvision.
+# Directs pip to the PyTorch CPU index so sentence-transformers pulls a CPU
+# torch build (~200 MB) instead of the default GPU build (~2 GB).
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 # ── Web framework ─────────────────────────────────────────────────────────────
 fastapi==0.135.1
 uvicorn==0.41.0
-websockets==16.0
+websockets==15.0.1
 
 # ── LLM / Groq client ─────────────────────────────────────────────────────────
-# Pinned to avoid resolving jiter to a version without pre-built Linux wheels.
-openai==1.56.0
-jiter==0.8.0
+openai==2.26.0
+jiter==0.13.0
 
 # ── Supabase backend ──────────────────────────────────────────────────────────
-supabase>=2.0.0
+supabase==2.28.0
 
-# ── Embeddings (sentence-transformers + CPU torch) ────────────────────────────
-sentence-transformers>=3.0.0
-torch>=2.0.0
+# ── Embeddings ────────────────────────────────────────────────────────────────
+# torch is a transitive dep of sentence-transformers — not listed directly.
+sentence-transformers==5.2.3
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
-python-dotenv>=1.0.0
-numpy>=1.24.0
-pydantic>=2.0.0
+python-dotenv==1.2.2
+numpy==2.4.2
+pydantic==2.12.5
