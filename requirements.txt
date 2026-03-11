@@ -1,107 +1,30 @@
+# Runtime dependencies for the FastAPI server (server.py / server_llama.py).
+# This is what Render installs — kept intentionally slim.
+#
+# For local data-ingestion work (build_supabase.py, build_chromadb.py,
+# character_profiler.py) install the dev extras too:
+#   pip install -r requirements-dev.txt
+
+# ── CPU-only PyTorch wheel ─────────────────────────────────────────────────────
+# Saves ~1.8 GB vs the default GPU build. Must come before torch/torchvision.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 # ── Web framework ─────────────────────────────────────────────────────────────
 fastapi==0.135.1
-starlette==0.52.1
 uvicorn==0.41.0
-uvloop==0.22.1
 websockets==16.0
-httptools==0.7.1
-watchfiles==1.1.1
 
 # ── LLM / Groq client ─────────────────────────────────────────────────────────
 openai>=1.0.0
-httpx==0.28.1
-httpcore==1.0.9
-h11==0.16.0
-distro==1.9.0
 
 # ── Supabase backend ──────────────────────────────────────────────────────────
 supabase>=2.0.0
-websocket-client==1.9.0
 
-# ── Embeddings (sentence-transformers + torch CPU) ────────────────────────────
-# torch: GPU build is ~2 GB and unnecessary for inference.
-# On Render (or any CPU-only host) install the CPU wheel instead:
-#   pip install torch --extra-index-url https://download.pytorch.org/whl/cpu
+# ── Embeddings (sentence-transformers + CPU torch) ────────────────────────────
 sentence-transformers>=3.0.0
-torch==2.10.0
-transformers==4.46.3
-tokenizers==0.20.3
-safetensors==0.7.0
-huggingface_hub==0.36.2
-hf-xet==1.3.2
+torch>=2.0.0
 
-# ── ChromaDB (optional fallback backend) ──────────────────────────────────────
-chromadb==1.5.2
-onnxruntime==1.24.2
-mmh3==5.2.0
-orjson==3.11.7
-PyPika==0.51.1
-overrides==7.7.0
-posthog==5.4.0
-opentelemetry-api==1.40.0
-opentelemetry-exporter-otlp-proto-common==1.40.0
-opentelemetry-exporter-otlp-proto-grpc==1.40.0
-opentelemetry-proto==1.40.0
-opentelemetry-sdk==1.40.0
-opentelemetry-semantic-conventions==0.61b0
-grpcio==1.78.0
-googleapis-common-protos==1.72.0
-protobuf==6.33.5
-
-# ── Data processing (ingestion scripts only, not needed at runtime) ───────────
-pandas==3.0.1
-python-dateutil==2.9.0.post0
-
-# ── Core utilities ────────────────────────────────────────────────────────────
-python-dotenv==1.2.2
-numpy==2.4.2
-pydantic==2.12.5
-pydantic_core==2.41.5
-annotated-types==0.7.0
-typing_extensions==4.15.0
-typing-inspection==0.4.2
-
-# ── Network / HTTP ────────────────────────────────────────────────────────────
-requests==2.32.5
-urllib3==2.6.3
-certifi==2026.2.25
-charset-normalizer==3.4.0
-idna==3.11
-oauthlib==3.3.1
-requests-oauthlib==2.0.0
-
-# ── Misc transitive dependencies ──────────────────────────────────────────────
-anyio==4.12.1
-attrs==25.4.0
-backoff==2.2.1
-bcrypt==5.0.0
-click==8.3.1
-durationpy==0.10
-filelock==3.25.0
-flatbuffers==25.12.19
-fsspec==2026.2.0
-importlib_metadata==8.7.1
-importlib_resources==6.5.2
-Jinja2==3.1.6
-jsonschema==4.26.0
-jsonschema-specifications==2025.9.1
-markdown-it-py==4.0.0
-MarkupSafe==3.0.3
-mdurl==0.1.2
-mpmath==1.3.0
-networkx==3.6.1
-packaging==26.0
-psutil==7.2.2
-pybase64==1.4.3
-Pygments==2.19.2
-PyYAML==6.0.3
-referencing==0.37.0
-regex==2026.2.28
-rich==14.3.3
-rpds-py==0.30.0
-setuptools==82.0.0
-six==1.17.0
-sympy==1.14.0
-tenacity==9.1.4
-tqdm==4.67.3
-zipp==3.23.0
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-dotenv>=1.0.0
+numpy>=1.24.0
+pydantic>=2.0.0

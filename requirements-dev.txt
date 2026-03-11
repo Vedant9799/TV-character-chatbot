@@ -1,0 +1,17 @@
+# Dev / ingestion dependencies — install locally for:
+#   build_supabase.py, build_chromadb.py, character_profiler.py
+#
+# Usage:
+#   pip install -r requirements-dev.txt
+
+# Includes everything in requirements.txt
+-r requirements.txt
+
+# ── Data ingestion (build_supabase.py / build_chromadb.py) ───────────────────
+pandas>=2.0.0
+
+# ── ChromaDB (optional fallback backend + build_chromadb.py) ─────────────────
+chromadb==1.5.2
+
+# ── Character profiler (calls Groq/OpenAI — already in requirements.txt) ─────
+# No additional deps needed.
