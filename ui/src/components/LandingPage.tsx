@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { CHARACTERS, DEFAULT_CHARACTER } from '../constants/characters'
+import { CHARACTERS } from '../constants/characters'
 import type { CharacterMeta } from '../types'
 
 interface LandingPageProps {
   onSelectCharacter: (char: string) => void
-  onCompare:         (char: string) => void
 }
 
 // ── Character portrait ────────────────────────────────────────────────────────
@@ -61,12 +60,11 @@ function Portrait({
 
 // ── Character card ────────────────────────────────────────────────────────────
 function CharacterCard({
-  name, meta, onClick, onCompare,
+  name, meta, onClick,
 }: {
   name: string
   meta: CharacterMeta
-  onClick:   () => void
-  onCompare: () => void
+  onClick: () => void
 }) {
   const { color = '#7c3aed', description, show } = meta
   const [hovered, setHovered] = useState(false)
@@ -78,29 +76,9 @@ function CharacterCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Portrait + compare overlay button */}
-      <div className="relative">
-        <button onClick={onClick} className="w-full focus:outline-none block">
-          <Portrait name={name} meta={meta} hovered={hovered} />
-        </button>
-
-        {/* ⚔ Compare — top-right overlay, fades in on hover */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onCompare() }}
-          title={`Compare models as ${name}`}
-          className={[
-            'absolute top-2 right-2 z-10',
-            'h-6 px-2 flex items-center gap-1',
-            'rounded-md bg-app-bg/85 border text-[9px] font-pixel',
-            'transition-all duration-200 whitespace-nowrap',
-            hovered
-              ? 'opacity-100 scale-100 border-app-border-hi text-slate-400 hover:text-violet-300 hover:border-violet-600'
-              : 'opacity-0 scale-90 pointer-events-none border-transparent',
-          ].join(' ')}
-        >
-          ⚔ Compare
-        </button>
-      </div>
+      <button onClick={onClick} className="w-full focus:outline-none block">
+        <Portrait name={name} meta={meta} hovered={hovered} />
+      </button>
 
       {/* Text block — click also goes to chat */}
       <button onClick={onClick} className="px-1 flex flex-col gap-1 text-left w-full focus:outline-none">
@@ -127,7 +105,7 @@ function CharacterCard({
 }
 
 // ── Landing page ──────────────────────────────────────────────────────────────
-export default function LandingPage({ onSelectCharacter, onCompare }: LandingPageProps) {
+export default function LandingPage({ onSelectCharacter }: LandingPageProps) {
   const entries = Object.entries(CHARACTERS)
 
   return (
@@ -143,10 +121,6 @@ export default function LandingPage({ onSelectCharacter, onCompare }: LandingPag
           TV Character
           <span className="gradient-text"> Chatbot</span>
         </h1>
-
-        {/* <p className="mt-6 text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">
-          Chat with your favourite TV characters. Replies grounded in real dialogue via RAG.
-        </p> */}
       </div>
 
       {/* ── Character grid ────────────────────────────────────────────────── */}
@@ -157,31 +131,10 @@ export default function LandingPage({ onSelectCharacter, onCompare }: LandingPag
               key={name}
               name={name}
               meta={meta}
-              onClick={()    => onSelectCharacter(name)}
-              onCompare={() => onCompare(name)}
+              onClick={() => onSelectCharacter(name)}
             />
           ))}
         </div>
-
-        {/* ── Compare models CTA ────────────────────────────────────────────── */}
-        <div className="mt-10 flex flex-col items-center gap-3">
-          <button
-            onClick={() => onCompare(DEFAULT_CHARACTER)}
-            className="
-              flex items-center gap-2.5
-              px-5 py-2.5 rounded-xl
-              bg-app-surface2 border border-app-border
-              text-slate-400 hover:text-slate-100 hover:border-app-border-hi
-              transition-all duration-200 group
-            "
-          >
-            <span className="text-base transition-transform duration-200 group-hover:scale-110">⚔</span>
-            <span className="text-xs font-medium">Compare Models Side by Side</span>
-            <span className="text-slate-600 text-xs">→</span>
-          </button>
-
-        </div>
-
       </div>
 
     </div>
