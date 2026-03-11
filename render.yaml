@@ -1,34 +1,10 @@
 # render.yaml — Render Infrastructure-as-Code
 # Docs: https://render.com/docs/yaml-spec
-#
-# This file configures one web service per LLM backend.
-# For the compare feature you need both services running simultaneously.
-# Deploy whichever you need — at minimum deploy `tv-chatbot-qwen`.
 
 services:
 
-  # ── Model A: Qwen3 (server.py) ────────────────────────────────────────────
   - type: web
-    name: tv-chatbot-qwen
-    runtime: python
-    pythonVersion: "3.13"
-    buildCommand: npm --prefix ui ci && npm --prefix ui run build && mkdir -p static && cp -r ui/dist/. static/ && pip install -r requirements.txt
-    startCommand: python server.py --host 0.0.0.0 --port $PORT
-    healthCheckPath: /health
-    autoDeploy: true
-    envVars:
-      - key: GROQ_API_KEY
-        sync: false               # set manually in Render dashboard
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_KEY
-        sync: false
-
-  # ── Model B: Llama 3 (server_llama.py) ────────────────────────────────────
-  # Only needed if you use the "Compare Models" side-by-side view.
-  # Set VITE_COMPARE_B on Vercel to this service's public URL.
-  - type: web
-    name: tv-chatbot-llama
+    name: tv-character-chatbot
     runtime: python
     pythonVersion: "3.13"
     buildCommand: npm --prefix ui ci && npm --prefix ui run build && mkdir -p static && cp -r ui/dist/. static/ && pip install -r requirements.txt
