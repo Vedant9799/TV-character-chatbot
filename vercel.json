@@ -1,5 +1,4 @@
 {
-  "rootDirectory": "ui",
   "framework": "vite",
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
