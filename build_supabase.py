@@ -72,22 +72,11 @@ def _doc_to_row(doc: SceneDoc, embedding: List[float]) -> dict:
         "characters_present":  m.get("characters_present",  "[]"),
         "episode_title":       m.get("episode_title",       ""),
         "turn_idx":            m.get("turn_idx",            None),
-        # Character-presence flags — all main cast of both shows
-        "has_sheldon":         bool(m.get("has_sheldon",    False)),
-        "has_leonard":         bool(m.get("has_leonard",    False)),
-        "has_penny":           bool(m.get("has_penny",      False)),
-        "has_howard":          bool(m.get("has_howard",     False)),
-        "has_raj":             bool(m.get("has_raj",        False)),
-        "has_amy":             bool(m.get("has_amy",        False)),
-        "has_bernadette":      bool(m.get("has_bernadette", False)),
-        "has_michael":         bool(m.get("has_michael",    False)),
-        "has_dwight":          bool(m.get("has_dwight",     False)),
-        "has_jim":             bool(m.get("has_jim",        False)),
-        "has_pam":             bool(m.get("has_pam",        False)),
-        "has_andy":            bool(m.get("has_andy",       False)),
-        "has_ryan":            bool(m.get("has_ryan",       False)),
-        "has_kevin":           bool(m.get("has_kevin",      False)),
-        "has_angela":          bool(m.get("has_angela",     False)),
+        # Character-presence flags — supported characters only
+        # Add a new entry here + a column in supabase_schema.sql when adding a character
+        "has_sheldon": bool(m.get("has_sheldon", False)),
+        "has_michael": bool(m.get("has_michael", False)),
+        "has_dwight":  bool(m.get("has_dwight",  False)),
     }
 
 

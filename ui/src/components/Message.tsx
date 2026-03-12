@@ -5,6 +5,21 @@ interface MessageProps {
   message: MessageType
 }
 
+// WhatsApp-style three-dot typing indicator
+function TypingDots({ color }: { color: string }) {
+  return (
+    <span className="flex items-center gap-[5px] px-0.5 py-0.5">
+      {[0, 0.2, 0.4].map((delay, i) => (
+        <span
+          key={i}
+          className="w-2 h-2 rounded-full animate-typingDot"
+          style={{ backgroundColor: color, animationDelay: `${delay}s` }}
+        />
+      ))}
+    </span>
+  )
+}
+
 export default function Message({ message }: MessageProps) {
   const { role, content, streaming, character } = message
 
@@ -68,19 +83,23 @@ export default function Message({ message }: MessageProps) {
           {isUser ? (
             content || (streaming ? '' : <span className="italic text-slate-400">…</span>)
           ) : content ? (
-            content.split('\n').map((line, i) => (
-              <p key={i} className="mb-1.5 last:mb-0">{line}</p>
-            ))
+            <>
+              {content.split('\n').map((line, i) => (
+                <p key={i} className="mb-1.5 last:mb-0">{line}</p>
+              ))}
+              {/* Blinking cursor while tokens are still arriving */}
+              {streaming && (
+                <span
+                  className="inline-block w-[2px] h-[1em] ml-0.5 align-middle animate-blink rounded-full"
+                  style={{ backgroundColor: color }}
+                />
+              )}
+            </>
+          ) : streaming ? (
+            // No tokens yet — show the WhatsApp-style typing indicator
+            <TypingDots color={color} />
           ) : (
-            streaming ? null : <span className="italic text-slate-500">…</span>
-          )}
-
-          {/* Blinking cursor while streaming */}
-          {streaming && (
-            <span
-              className="inline-block w-[2px] h-[1em] ml-0.5 align-middle animate-blink rounded-full"
-              style={{ backgroundColor: color }}
-            />
+            <span className="italic text-slate-500">…</span>
           )}
         </div>
       </div>

@@ -7,18 +7,23 @@ export default {
         pixel: ['"Press Start 2P"', 'monospace'],
       },
       animation: {
-        blink:     'blink 0.7s step-end infinite',
-        fadeIn:    'fadeIn 0.22s ease both',
-        slideUp:   'slideUp 0.24s ease both',
-        slideDown: 'slideDown 0.24s ease both',
-        scaleIn:   'scaleIn 0.2s ease both',
-        float:     'float 4s ease-in-out infinite',
-        shimmer:   'shimmer 2.5s linear infinite',
+        blink:      'blink 0.7s step-end infinite',
+        fadeIn:     'fadeIn 0.22s ease both',
+        slideUp:    'slideUp 0.24s ease both',
+        slideDown:  'slideDown 0.24s ease both',
+        scaleIn:    'scaleIn 0.2s ease both',
+        float:      'float 4s ease-in-out infinite',
+        shimmer:    'shimmer 2.5s linear infinite',
+        typingDot:  'typingDot 1.2s ease-in-out infinite',
       },
       keyframes: {
         blink: {
           '0%, 100%': { opacity: '1' },
           '50%':       { opacity: '0' },
+        },
+        typingDot: {
+          '0%, 60%, 100%': { transform: 'translateY(0)',    opacity: '0.35' },
+          '30%':           { transform: 'translateY(-5px)', opacity: '1'    },
         },
         fadeIn: {
           from: { opacity: '0' },
