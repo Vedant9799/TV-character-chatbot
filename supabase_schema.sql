@@ -31,25 +31,11 @@ create table if not exists tv_scenes (
   episode_title       text        not null default '',
   turn_idx            integer,                           -- exemplar only; null for canon
 
-  -- Boolean character-presence flags (main cast of both shows)
-  -- Big Bang Theory cast
+  -- Boolean character-presence flags (supported characters only)
+  -- Add a new column here + in build_supabase.py when adding a new character
   has_sheldon         boolean     not null default false,
-  has_leonard         boolean     not null default false,
-  has_penny           boolean     not null default false,
-  has_howard          boolean     not null default false,
-  has_raj             boolean     not null default false,
-  has_amy             boolean     not null default false,
-  has_bernadette      boolean     not null default false,
-
-  -- The Office cast
   has_michael         boolean     not null default false,
-  has_dwight          boolean     not null default false,
-  has_jim             boolean     not null default false,
-  has_pam             boolean     not null default false,
-  has_andy            boolean     not null default false,
-  has_ryan            boolean     not null default false,
-  has_kevin           boolean     not null default false,
-  has_angela          boolean     not null default false
+  has_dwight          boolean     not null default false
 );
 
 
