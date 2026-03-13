@@ -34,6 +34,7 @@ import queue as thread_queue
 import re
 from pathlib import Path
 from threading import Thread
+from time import perf_counter
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -55,6 +56,7 @@ try:
 except ImportError:
     _SUPABASE_AVAILABLE = False
 from dotenv import load_dotenv
+from eval_logger import EvalLogger, build_eval_logger
 from openai import OpenAI
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -213,6 +215,7 @@ groq_client: OpenAI                             # initialised in main()
 _rag_backend:    str    = "chroma"    # "chroma" | "supabase"
 _supabase_client        = None        # supabase.Client instance
 _sentence_model         = None        # SentenceTransformer instance
+eval_logger: Optional[EvalLogger] = None
 
 # ---------------------------------------------------------------------------
 # RAG helpers (identical to chatbot_server.py)
@@ -511,6 +514,7 @@ async def stream_reply(
     user_msg: str,
 ) -> str:
     """Build RAG-grounded prompt, stream Groq response to the WebSocket client."""
+    started_at = perf_counter()
     show = SHOW_MAP.get(character, "a TV show")
     desc = CHARACTER_DESCRIPTIONS.get(character, f"You are {character}.")
 
@@ -520,6 +524,7 @@ async def stream_reply(
     )
     rag_query = f"{last_bot_reply} {user_msg}".strip() if last_bot_reply else user_msg
 
+    rag_started_at = perf_counter()
     if _rag_backend == "supabase":
         canon_text, exemplar_text = await asyncio.to_thread(
             retrieve_from_supabase, character, rag_query
@@ -528,6 +533,7 @@ async def stream_reply(
         canon_text, exemplar_text = await asyncio.to_thread(
             retrieve_scene_examples, character, rag_query
         )
+    rag_time_ms = (perf_counter() - rag_started_at) * 1000.0
 
     # ── Parse profile into named sections (handles both new 4-section format
     #    from character_profiler.py) ──
@@ -622,6 +628,7 @@ async def stream_reply(
     ).start()
 
     full_response = ""
+    llm_started_at = perf_counter()
     loop = asyncio.get_running_loop()   # get_event_loop() is deprecated in 3.10+
 
     while True:
@@ -631,7 +638,25 @@ async def stream_reply(
         full_response += token
         await ws.send_text(json.dumps({"type": "token", "content": token}))
 
+    llm_time_ms = (perf_counter() - llm_started_at) * 1000.0
     await ws.send_text(json.dumps({"type": "done"}))
+
+    total_time_ms = (perf_counter() - started_at) * 1000.0
+    response_for_log = full_response.strip() or full_response
+    if eval_logger is not None and eval_logger.is_enabled() and response_for_log:
+        await asyncio.to_thread(
+            eval_logger.log_interaction,
+            character=character,
+            user_message=user_msg,
+            bot_response=response_for_log,
+            rag_query=rag_query,
+            model_name=groq_model,
+            rag_backend=_rag_backend,
+            rag_time_ms=rag_time_ms,
+            llm_time_ms=llm_time_ms,
+            total_time_ms=total_time_ms,
+        )
+
     return full_response
 
 
@@ -723,7 +748,7 @@ def main() -> None:
     import os
     load_dotenv()
     global chroma_col, groq_model, groq_client, CHARACTER_DESCRIPTIONS, SHOW_MAP, \
-           CHROMA_SHOW_KEY, _rag_backend, _supabase_client, _sentence_model
+           CHROMA_SHOW_KEY, _rag_backend, _supabase_client, _sentence_model, eval_logger
 
     parser = argparse.ArgumentParser(description="TV Character Chatbot Server (Groq / Llama)")
     parser.add_argument(
@@ -744,6 +769,14 @@ def main() -> None:
     )
     parser.add_argument("--persist-dir",  default="./chroma_db")
     parser.add_argument("--collection",   default="tv_scenes")
+    parser.add_argument(
+        "--eval-log-db", default="./eval_logs.db",
+        help="Path to the sqlite database used for evaluation logging.",
+    )
+    parser.add_argument(
+        "--no-eval-logging", action="store_true",
+        help="Disable sqlite evaluation logging for chat turns.",
+    )
     parser.add_argument("--host",         default="0.0.0.0")
     parser.add_argument("--port",         type=int, default=8001)
     args = parser.parse_args()
@@ -842,6 +875,15 @@ def main() -> None:
                 "ERROR: ChromaDB backend is unavailable.\n"
                 f"Reason: {reason}"
             )
+
+    eval_logger = build_eval_logger(
+        enabled=not args.no_eval_logging,
+        db_path=args.eval_log_db,
+    )
+    if eval_logger.is_enabled():
+        print(f"  Eval logs: {eval_logger.get_db_path().resolve()}\n")
+    else:
+        print("  Eval logs: disabled\n")
 
     uvicorn.run(app, host=args.host, port=args.port)
 

@@ -211,6 +211,9 @@ chroma_db
 ui/node_modules
 .claude
 .logs
+eval_logs.db
+eval_logs.db-shm
+eval_logs.db-wal
 # Build outputs — Vercel builds ui/dist, not tracked in git
 ui/dist
 static/
