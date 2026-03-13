@@ -290,8 +290,8 @@
         <div class="d">① Roleplay contract<br>② Profile (identity · speech · rules)<br>③ Canon ×3 + Exemplar ×2 (RAG)<br>④ History (last 10 turns)</div>
       </div>
       <div class="box">
-        <div class="t">🧹 Post-Process</div>
-        <div class="d">Strip &lt;think&gt; blocks<br>Remove *asterisks* [brackets]<br>Word queue → WS stream</div>
+        <div class="t">🧹 Clean + Log</div>
+        <div class="d">Strip &lt;think&gt; blocks<br>Remove *asterisks* [brackets]<br>Queue words → WS stream<br>Async eval log → SQLite</div>
       </div>
     </div>
 
@@ -311,7 +311,7 @@
       </div>
       <div class="box">
         <div class="t">🔍 Two-Pass</div>
-        <div class="d"><b>Canon:</b> 20 → MMR → 3 scenes<br><b>Exemplar:</b> 10 → top 2<br>Filter: show + has_&lt;char&gt;</div>
+        <div class="d"><b>Canon:</b> 20 → dedupe/top 3<br><b>Exemplar:</b> 10 → dedupe/top 2<br>Filter: show + doc_type + has_&lt;char&gt;</div>
       </div>
       <div class="box">
         <div class="t">📐 Embed</div>
@@ -374,16 +374,16 @@
     <div class="layer deploy" data-label="Deployment">
       <div class="box">
         <div class="t">🌐 Render</div>
-        <div class="d"><b>Build:</b> npm build → cp dist/ static/ → pip install<br><b>Start:</b> python server_llama.py --host 0.0.0.0 --port $PORT<br><b>Static:</b> FastAPI mounts ./static/ as SPA</div>
+        <div class="d"><b>Build:</b> npm --prefix ui ci → build → copy to static/ → pip install<br><b>Start:</b> python server_llama.py --host 0.0.0.0 --port $PORT<br><b>Static:</b> FastAPI mounts ./static/ as SPA</div>
         <span class="badge b-yellow">Python 3.13 · Single Service</span>
       </div>
       <div class="box">
-        <div class="t">🔑 Env Vars</div>
-        <div class="d"><b>GROQ_API_KEY</b><br><b>SUPABASE_URL</b><br><b>SUPABASE_SERVICE_KEY</b></div>
+        <div class="t">🧰 Runtime State</div>
+        <div class="d"><b>Eval logs:</b> ./eval_logs.db<br><b>Writes:</b> character, prompt, reply<br><b>Metrics:</b> rag / llm / total ms</div>
       </div>
       <div class="box">
-        <div class="t">🔄 CI/CD</div>
-        <div class="d">git push → auto-deploy<br>render.yaml · autoDeploy</div>
+        <div class="t">🔑 Env + CI/CD</div>
+        <div class="d"><b>GROQ_API_KEY</b><br><b>SUPABASE_URL</b><br><b>SUPABASE_SERVICE_KEY</b><br>git push → Render auto-deploy</div>
       </div>
     </div>
 

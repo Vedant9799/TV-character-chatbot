@@ -216,4 +216,5 @@ eval_logs.db-shm
 eval_logs.db-wal
 # Build outputs — Vercel builds ui/dist, not tracked in git
 ui/dist
-static/
+structurizr/.structurizr
+static
