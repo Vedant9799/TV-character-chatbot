@@ -1,0 +1,846 @@
+{
+  "configuration" : { },
+  "description" : "RAG-grounded TV character roleplay chatbot — React + FastAPI + Supabase pgvector + Groq.",
+  "documentation" : { },
+  "id" : 1,
+  "lastModifiedAgent" : "structurizr-ui",
+  "lastModifiedDate" : "2026-03-13T18:32:14Z",
+  "model" : {
+    "deploymentNodes" : [ {
+      "containerInstances" : [ {
+        "containerId" : "3",
+        "deploymentGroups" : [ "Default" ],
+        "environment" : "production",
+        "id" : "41",
+        "instanceId" : 1,
+        "properties" : {
+          "structurizr.dsl.identifier" : "de97106c-2990-450a-b26d-f4362e7930ff"
+        },
+        "relationships" : [ {
+          "description" : "Chat and control frames",
+          "destinationId" : "44",
+          "id" : "45",
+          "linkedRelationshipId" : "22",
+          "sourceId" : "41",
+          "technology" : "WebSocket / WSS"
+        } ],
+        "tags" : "Container Instance"
+      } ],
+      "description" : "End-user device",
+      "environment" : "production",
+      "id" : "40",
+      "instances" : "1",
+      "name" : "User's Browser",
+      "properties" : {
+        "structurizr.dsl.identifier" : "d3f98d61-4888-460c-ab22-13f6fb74f6ec"
+      },
+      "tags" : "Element,Deployment Node",
+      "technology" : "Chrome · Safari · Firefox"
+    }, {
+      "containerInstances" : [ {
+        "containerId" : "9",
+        "deploymentGroups" : [ "Default" ],
+        "environment" : "production",
+        "id" : "44",
+        "instanceId" : 1,
+        "properties" : {
+          "structurizr.dsl.identifier" : "3d393110-2b0c-437a-bb31-fe7dac1048c6"
+        },
+        "relationships" : [ {
+          "description" : "Reads character personas at startup",
+          "destinationId" : "46",
+          "id" : "47",
+          "linkedRelationshipId" : "27",
+          "sourceId" : "44"
+        }, {
+          "description" : "chat/completions (streaming)",
+          "destinationId" : "50",
+          "id" : "51",
+          "linkedRelationshipId" : "23",
+          "sourceId" : "44",
+          "technology" : "HTTPS · SSE"
+        }, {
+          "description" : "match_tv_scenes() RPC",
+          "destinationId" : "53",
+          "id" : "54",
+          "linkedRelationshipId" : "25",
+          "sourceId" : "44",
+          "technology" : "HTTPS · supabase-py 2.28"
+        } ],
+        "tags" : "Container Instance"
+      }, {
+        "containerId" : "17",
+        "deploymentGroups" : [ "Default" ],
+        "environment" : "production",
+        "id" : "46",
+        "instanceId" : 1,
+        "properties" : {
+          "structurizr.dsl.identifier" : "ee0ea8ea-7ce5-471a-b051-4ed4c5b4a44f"
+        },
+        "tags" : "Container Instance"
+      } ],
+      "description" : "Cloud PaaS — Python 3.13 web service",
+      "environment" : "production",
+      "id" : "42",
+      "infrastructureNodes" : [ {
+        "description" : "Built React SPA assets copied here during build.",
+        "environment" : "production",
+        "id" : "43",
+        "name" : "static/",
+        "properties" : {
+          "structurizr.dsl.identifier" : "571be26a-a368-42ba-b840-c828569c1a92"
+        },
+        "tags" : "Element,Infrastructure Node"
+      } ],
+      "instances" : "1",
+      "name" : "Render.com",
+      "properties" : {
+        "structurizr.dsl.identifier" : "d7119cab-3356-493d-97ba-02e594c83751"
+      },
+      "tags" : "Element,Deployment Node",
+      "technology" : "tv-character-chatbot"
+    }, {
+      "children" : [ {
+        "description" : "External — api.groq.com",
+        "environment" : "production",
+        "id" : "49",
+        "instances" : "1",
+        "name" : "Groq Cloud",
+        "properties" : {
+          "structurizr.dsl.identifier" : "b122abfa-c561-4b1a-9637-b2d544ef4500"
+        },
+        "softwareSystemInstances" : [ {
+          "deploymentGroups" : [ "Default" ],
+          "environment" : "production",
+          "id" : "50",
+          "instanceId" : 1,
+          "properties" : {
+            "structurizr.dsl.identifier" : "9e536b95-30f0-4a5e-8ceb-bed7af1c49cb"
+          },
+          "softwareSystemId" : "18",
+          "tags" : "Software System Instance"
+        } ],
+        "tags" : "Element,Deployment Node",
+        "technology" : "LPU inference cluster"
+      }, {
+        "description" : "External — supabase.com",
+        "environment" : "production",
+        "id" : "52",
+        "instances" : "1",
+        "name" : "Supabase Cloud",
+        "properties" : {
+          "structurizr.dsl.identifier" : "63d25d48-1e38-499d-b298-9523f4b27349"
+        },
+        "softwareSystemInstances" : [ {
+          "deploymentGroups" : [ "Default" ],
+          "environment" : "production",
+          "id" : "53",
+          "instanceId" : 1,
+          "properties" : {
+            "structurizr.dsl.identifier" : "6758fb0d-8944-4cbb-bc35-72d9fbd10e70"
+          },
+          "softwareSystemId" : "19",
+          "tags" : "Software System Instance"
+        } ],
+        "tags" : "Element,Deployment Node",
+        "technology" : "Managed PostgreSQL + pgvector"
+      } ],
+      "description" : "Managed third-party services",
+      "environment" : "production",
+      "id" : "48",
+      "instances" : "1",
+      "name" : "External Services",
+      "properties" : {
+        "structurizr.dsl.identifier" : "72fdd54a-878d-4bbe-894d-c82f135421a8"
+      },
+      "tags" : "Element,Deployment Node"
+    } ],
+    "people" : [ {
+      "description" : "Chats with TV characters in a web browser.",
+      "id" : "1",
+      "name" : "User",
+      "properties" : {
+        "structurizr.dsl.identifier" : "user"
+      },
+      "relationships" : [ {
+        "description" : "Opens app, selects character, types messages",
+        "destinationId" : "3",
+        "id" : "20",
+        "sourceId" : "1",
+        "tags" : "Relationship",
+        "technology" : "HTTPS"
+      }, {
+        "description" : "Opens app, selects character, types messages",
+        "destinationId" : "2",
+        "id" : "21",
+        "linkedRelationshipId" : "20",
+        "sourceId" : "1",
+        "technology" : "HTTPS"
+      } ],
+      "tags" : "Element,Person"
+    } ],
+    "softwareSystems" : [ {
+      "containers" : [ {
+        "components" : [ {
+          "description" : "Character selection grid with animated portrait cards.",
+          "documentation" : { },
+          "id" : "4",
+          "name" : "Landing Page",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cLanding"
+          },
+          "tags" : "Element,Component",
+          "technology" : "LandingPage.tsx"
+        }, {
+          "description" : "Full chat screen: header, scrollable message list, input bar.",
+          "documentation" : { },
+          "id" : "5",
+          "name" : "Chat View",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cChat"
+          },
+          "tags" : "Element,Component",
+          "technology" : "ChatView.tsx"
+        }, {
+          "description" : "Renders user + bot bubbles. Shows TypingDots before first token, streaming cursor during generation.",
+          "documentation" : { },
+          "id" : "6",
+          "name" : "Message",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cMessage"
+          },
+          "tags" : "Element,Component",
+          "technology" : "Message.tsx"
+        }, {
+          "description" : "Manages WebSocket lifecycle with 3 s auto-reconnect.",
+          "documentation" : { },
+          "id" : "7",
+          "name" : "useWebSocket",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cWsHook"
+          },
+          "relationships" : [ {
+            "description" : "Connects and forwards JSON frames",
+            "destinationId" : "10",
+            "id" : "28",
+            "sourceId" : "7",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Connects and forwards JSON frames",
+            "destinationId" : "9",
+            "id" : "29",
+            "linkedRelationshipId" : "28",
+            "sourceId" : "7"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "useWebSocket.ts"
+        }, {
+          "description" : "Message state + RAF-batched token flushing (1 React update / frame).",
+          "documentation" : { },
+          "id" : "8",
+          "name" : "useChat",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cChatHook"
+          },
+          "relationships" : [ {
+            "description" : "send() / onmessage callback",
+            "destinationId" : "7",
+            "id" : "31",
+            "sourceId" : "8",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "useChat.ts"
+        } ],
+        "description" : "Character selection and chat UI. Served as static files from the backend.",
+        "documentation" : { },
+        "id" : "3",
+        "name" : "React SPA",
+        "properties" : {
+          "structurizr.dsl.identifier" : "spa"
+        },
+        "relationships" : [ {
+          "description" : "Chat and control frames",
+          "destinationId" : "9",
+          "id" : "22",
+          "sourceId" : "3",
+          "tags" : "Relationship",
+          "technology" : "WebSocket / WSS"
+        }, {
+          "description" : "Connects and forwards JSON frames",
+          "destinationId" : "10",
+          "id" : "30",
+          "linkedRelationshipId" : "28",
+          "sourceId" : "3"
+        } ],
+        "tags" : "Element,Container,Web Browser",
+        "technology" : "React 18 · TypeScript 5 · Vite 5 · Tailwind CSS 3"
+      }, {
+        "components" : [ {
+          "description" : "Accepts set_character / chat frames. Emits token / done / error frames.",
+          "documentation" : { },
+          "id" : "10",
+          "name" : "WebSocket Handler",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cWs"
+          },
+          "relationships" : [ {
+            "description" : "Triggers two-pass retrieval per user message",
+            "destinationId" : "11",
+            "id" : "32",
+            "sourceId" : "10",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Requests assembled system prompt",
+            "destinationId" : "12",
+            "id" : "33",
+            "sourceId" : "10",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Sends full conversation to LLM",
+            "destinationId" : "13",
+            "id" : "34",
+            "sourceId" : "10",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Pipes raw token stream through cleaner",
+            "destinationId" : "14",
+            "id" : "35",
+            "sourceId" : "10",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "/ws endpoint"
+        }, {
+          "description" : "Two-pass retrieval: 3 canon scenes (world knowledge) + 2 exemplars (voice anchor) via Supabase RPC.",
+          "documentation" : { },
+          "id" : "11",
+          "name" : "RAG Retriever",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cRag"
+          },
+          "relationships" : [ {
+            "description" : "Similarity search — filter: show + doc_type + has_<character>",
+            "destinationId" : "19",
+            "id" : "38",
+            "sourceId" : "11",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "retrieve_from_supabase()"
+        }, {
+          "description" : "Assembles system prompt: roleplay contract + profile sections + RAG context + rolling 10-turn history.",
+          "documentation" : { },
+          "id" : "12",
+          "name" : "Prompt Builder",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cPrompt"
+          },
+          "relationships" : [ {
+            "description" : "Injects 3 canon scenes + 2 voice exemplars",
+            "destinationId" : "11",
+            "id" : "36",
+            "sourceId" : "12",
+            "tags" : "Relationship"
+          }, {
+            "description" : "Reads character identity, speech style, rules",
+            "destinationId" : "15",
+            "id" : "37",
+            "sourceId" : "12",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "stream_reply()"
+        }, {
+          "description" : "OpenAI-compatible SDK client. Sends conversation, receives SSE token stream.",
+          "documentation" : { },
+          "id" : "13",
+          "name" : "Groq Client",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cGroq"
+          },
+          "relationships" : [ {
+            "description" : "Streaming LLM call — llama-3.3-70b-versatile",
+            "destinationId" : "18",
+            "id" : "39",
+            "sourceId" : "13",
+            "tags" : "Relationship"
+          } ],
+          "tags" : "Element,Component",
+          "technology" : "openai.OpenAI → api.groq.com"
+        }, {
+          "description" : "Strips <think>…</think>, asterisks, bracketed actions, character name prefixes. Queues words.",
+          "documentation" : { },
+          "id" : "14",
+          "name" : "Text Cleaner",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cClean"
+          },
+          "tags" : "Element,Component",
+          "technology" : "regex pipeline"
+        }, {
+          "description" : "Loads character_profiles.json at startup. Parses IDENTITY / SPEECH / TRIGGERS / RULES sections.",
+          "documentation" : { },
+          "id" : "15",
+          "name" : "Profile Loader",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cProfile"
+          },
+          "tags" : "Element,Component",
+          "technology" : "load_profiles()"
+        }, {
+          "description" : "Serves the built React SPA from ./static/ with HTML fallback for client-side routing.",
+          "documentation" : { },
+          "id" : "16",
+          "name" : "Static File Server",
+          "properties" : {
+            "structurizr.dsl.identifier" : "cStatic"
+          },
+          "tags" : "Element,Component",
+          "technology" : "FastAPI StaticFiles"
+        } ],
+        "description" : "WebSocket server — orchestrates RAG retrieval, prompt assembly, and streamed LLM responses.",
+        "documentation" : { },
+        "id" : "9",
+        "name" : "FastAPI Server",
+        "properties" : {
+          "structurizr.dsl.identifier" : "api"
+        },
+        "relationships" : [ {
+          "description" : "chat/completions (streaming)",
+          "destinationId" : "18",
+          "id" : "23",
+          "sourceId" : "9",
+          "tags" : "Relationship",
+          "technology" : "HTTPS · SSE"
+        }, {
+          "description" : "match_tv_scenes() RPC",
+          "destinationId" : "19",
+          "id" : "25",
+          "sourceId" : "9",
+          "tags" : "Relationship",
+          "technology" : "HTTPS · supabase-py 2.28"
+        }, {
+          "description" : "Reads character personas at startup",
+          "destinationId" : "17",
+          "id" : "27",
+          "sourceId" : "9",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "Python 3.13 · FastAPI 0.135 · Uvicorn 0.41 · server_llama.py"
+      }, {
+        "description" : "LLM-synthesised character persona definitions committed to the repo.",
+        "documentation" : { },
+        "id" : "17",
+        "name" : "Character Profiles",
+        "properties" : {
+          "structurizr.dsl.identifier" : "profiles"
+        },
+        "tags" : "Element,Container",
+        "technology" : "character_profiles.json · Sheldon · Michael · Dwight"
+      } ],
+      "description" : "Streams in-character responses grounded in real show dialogue via RAG.",
+      "documentation" : { },
+      "id" : "2",
+      "name" : "TV Character Chatbot",
+      "properties" : {
+        "structurizr.dsl.identifier" : "chatbot"
+      },
+      "relationships" : [ {
+        "description" : "chat/completions (streaming)",
+        "destinationId" : "18",
+        "id" : "24",
+        "linkedRelationshipId" : "23",
+        "sourceId" : "2",
+        "technology" : "HTTPS · SSE"
+      }, {
+        "description" : "match_tv_scenes() RPC",
+        "destinationId" : "19",
+        "id" : "26",
+        "linkedRelationshipId" : "25",
+        "sourceId" : "2",
+        "technology" : "HTTPS · supabase-py 2.28"
+      } ],
+      "tags" : "Element,Software System"
+    }, {
+      "description" : "Hosted LLM inference on custom LPU hardware. Model: llama-3.3-70b-versatile.",
+      "documentation" : { },
+      "id" : "18",
+      "name" : "Groq Cloud",
+      "properties" : {
+        "structurizr.dsl.identifier" : "groq"
+      },
+      "tags" : "Element,Software System,External"
+    }, {
+      "description" : "Managed PostgreSQL with pgvector extension. Stores 384-dim scene embeddings with HNSW index.",
+      "documentation" : { },
+      "id" : "19",
+      "name" : "Supabase",
+      "properties" : {
+        "structurizr.dsl.identifier" : "supabase"
+      },
+      "tags" : "Element,Software System,External"
+    } ]
+  },
+  "name" : "TV Character Chatbot",
+  "properties" : {
+    "structurizr.inspection.info" : "0",
+    "structurizr.inspection.ignore" : "0",
+    "structurizr.inspection.error" : "24",
+    "structurizr.inspection.warning" : "0",
+    "structurizr.dsl" : "d29ya3NwYWNlICJUViBDaGFyYWN0ZXIgQ2hhdGJvdCIgIlJBRy1ncm91bmRlZCBUViBjaGFyYWN0ZXIgcm9sZXBsYXkgY2hhdGJvdCDigJQgUmVhY3QgKyBGYXN0QVBJICsgU3VwYWJhc2UgcGd2ZWN0b3IgKyBHcm9xLiIgewoKICAgIG1vZGVsIHsKCiAgICAgICAgLy8g4pSA4pSAIFBlb3BsZSDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICB1c2VyID0gcGVyc29uICJVc2VyIiAiQ2hhdHMgd2l0aCBUViBjaGFyYWN0ZXJzIGluIGEgd2ViIGJyb3dzZXIuIgoKICAgICAgICAvLyDilIDilIAgT3VyIHN5c3RlbSDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICBjaGF0Ym90ID0gc29mdHdhcmVTeXN0ZW0gIlRWIENoYXJhY3RlciBDaGF0Ym90IiAiU3RyZWFtcyBpbi1jaGFyYWN0ZXIgcmVzcG9uc2VzIGdyb3VuZGVkIGluIHJlYWwgc2hvdyBkaWFsb2d1ZSB2aWEgUkFHLiIgewoKICAgICAgICAgICAgc3BhID0gY29udGFpbmVyICJSZWFjdCBTUEEiICJDaGFyYWN0ZXIgc2VsZWN0aW9uIGFuZCBjaGF0IFVJLiBTZXJ2ZWQgYXMgc3RhdGljIGZpbGVzIGZyb20gdGhlIGJhY2tlbmQuIiAiUmVhY3QgMTggwrcgVHlwZVNjcmlwdCA1IMK3IFZpdGUgNSDCtyBUYWlsd2luZCBDU1MgMyIgewogICAgICAgICAgICAgICAgdGFncyAiV2ViIEJyb3dzZXIiCgogICAgICAgICAgICAgICAgY0xhbmRpbmcgID0gY29tcG9uZW50ICJMYW5kaW5nIFBhZ2UiICAgICAgIkNoYXJhY3RlciBzZWxlY3Rpb24gZ3JpZCB3aXRoIGFuaW1hdGVkIHBvcnRyYWl0IGNhcmRzLiIgICAgICAgICAiTGFuZGluZ1BhZ2UudHN4IgogICAgICAgICAgICAgICAgY0NoYXQgICAgID0gY29tcG9uZW50ICJDaGF0IFZpZXciICAgICAgICAgIkZ1bGwgY2hhdCBzY3JlZW46IGhlYWRlciwgc2Nyb2xsYWJsZSBtZXNzYWdlIGxpc3QsIGlucHV0IGJhci4iICAiQ2hhdFZpZXcudHN4IgogICAgICAgICAgICAgICAgY01lc3NhZ2UgID0gY29tcG9uZW50ICJNZXNzYWdlIiAgICAgICAgICAgIlJlbmRlcnMgdXNlciArIGJvdCBidWJibGVzLiBTaG93cyBUeXBpbmdEb3RzIGJlZm9yZSBmaXJzdCB0b2tlbiwgc3RyZWFtaW5nIGN1cnNvciBkdXJpbmcgZ2VuZXJhdGlvbi4iICJNZXNzYWdlLnRzeCIKICAgICAgICAgICAgICAgIGNXc0hvb2sgICA9IGNvbXBvbmVudCAidXNlV2ViU29ja2V0IiAgICAgICJNYW5hZ2VzIFdlYlNvY2tldCBsaWZlY3ljbGUgd2l0aCAzIHMgYXV0by1yZWNvbm5lY3QuIiAgICAgICAgICAgInVzZVdlYlNvY2tldC50cyIKICAgICAgICAgICAgICAgIGNDaGF0SG9vayA9IGNvbXBvbmVudCAidXNlQ2hhdCIgICAgICAgICAgICJNZXNzYWdlIHN0YXRlICsgUkFGLWJhdGNoZWQgdG9rZW4gZmx1c2hpbmcgKDEgUmVhY3QgdXBkYXRlIC8gZnJhbWUpLiIgInVzZUNoYXQudHMiCiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIGFwaSA9IGNvbnRhaW5lciAiRmFzdEFQSSBTZXJ2ZXIiICJXZWJTb2NrZXQgc2VydmVyIOKAlCBvcmNoZXN0cmF0ZXMgUkFHIHJldHJpZXZhbCwgcHJvbXB0IGFzc2VtYmx5LCBhbmQgc3RyZWFtZWQgTExNIHJlc3BvbnNlcy4iICJQeXRob24gMy4xMyDCtyBGYXN0QVBJIDAuMTM1IMK3IFV2aWNvcm4gMC40MSDCtyBzZXJ2ZXJfbGxhbWEucHkiIHsKCiAgICAgICAgICAgICAgICBjV3MgICAgICA9IGNvbXBvbmVudCAiV2ViU29ja2V0IEhhbmRsZXIiICAiQWNjZXB0cyBzZXRfY2hhcmFjdGVyIC8gY2hhdCBmcmFtZXMuIEVtaXRzIHRva2VuIC8gZG9uZSAvIGVycm9yIGZyYW1lcy4iICIvd3MgZW5kcG9pbnQiCiAgICAgICAgICAgICAgICBjUmFnICAgICA9IGNvbXBvbmVudCAiUkFHIFJldHJpZXZlciIgICAgICAiVHdvLXBhc3MgcmV0cmlldmFsOiAzIGNhbm9uIHNjZW5lcyAod29ybGQga25vd2xlZGdlKSArIDIgZXhlbXBsYXJzICh2b2ljZSBhbmNob3IpIHZpYSBTdXBhYmFzZSBSUEMuIiAicmV0cmlldmVfZnJvbV9zdXBhYmFzZSgpIgogICAgICAgICAgICAgICAgY1Byb21wdCAgPSBjb21wb25lbnQgIlByb21wdCBCdWlsZGVyIiAgICAgIkFzc2VtYmxlcyBzeXN0ZW0gcHJvbXB0OiByb2xlcGxheSBjb250cmFjdCArIHByb2ZpbGUgc2VjdGlvbnMgKyBSQUcgY29udGV4dCArIHJvbGxpbmcgMTAtdHVybiBoaXN0b3J5LiIgInN0cmVhbV9yZXBseSgpIgogICAgICAgICAgICAgICAgY0dyb3EgICAgPSBjb21wb25lbnQgIkdyb3EgQ2xpZW50IiAgICAgICAgIk9wZW5BSS1jb21wYXRpYmxlIFNESyBjbGllbnQuIFNlbmRzIGNvbnZlcnNhdGlvbiwgcmVjZWl2ZXMgU1NFIHRva2VuIHN0cmVhbS4iICJvcGVuYWkuT3BlbkFJIOKGkiBhcGkuZ3JvcS5jb20iCiAgICAgICAgICAgICAgICBjQ2xlYW4gICA9IGNvbXBvbmVudCAiVGV4dCBDbGVhbmVyIiAgICAgICAiU3RyaXBzIDx0aGluaz7igKY8L3RoaW5rPiwgYXN0ZXJpc2tzLCBicmFja2V0ZWQgYWN0aW9ucywgY2hhcmFjdGVyIG5hbWUgcHJlZml4ZXMuIFF1ZXVlcyB3b3Jkcy4iICJyZWdleCBwaXBlbGluZSIKICAgICAgICAgICAgICAgIGNQcm9maWxlID0gY29tcG9uZW50ICJQcm9maWxlIExvYWRlciIgICAgICJMb2FkcyBjaGFyYWN0ZXJfcHJvZmlsZXMuanNvbiBhdCBzdGFydHVwLiBQYXJzZXMgSURFTlRJVFkgLyBTUEVFQ0ggLyBUUklHR0VSUyAvIFJVTEVTIHNlY3Rpb25zLiIgImxvYWRfcHJvZmlsZXMoKSIKICAgICAgICAgICAgICAgIGNTdGF0aWMgID0gY29tcG9uZW50ICJTdGF0aWMgRmlsZSBTZXJ2ZXIiICJTZXJ2ZXMgdGhlIGJ1aWx0IFJlYWN0IFNQQSBmcm9tIC4vc3RhdGljLyB3aXRoIEhUTUwgZmFsbGJhY2sgZm9yIGNsaWVudC1zaWRlIHJvdXRpbmcuIiAiRmFzdEFQSSBTdGF0aWNGaWxlcyIKICAgICAgICAgICAgfQoKICAgICAgICAgICAgcHJvZmlsZXMgPSBjb250YWluZXIgIkNoYXJhY3RlciBQcm9maWxlcyIgIkxMTS1zeW50aGVzaXNlZCBjaGFyYWN0ZXIgcGVyc29uYSBkZWZpbml0aW9ucyBjb21taXR0ZWQgdG8gdGhlIHJlcG8uIiAiY2hhcmFjdGVyX3Byb2ZpbGVzLmpzb24gwrcgU2hlbGRvbiDCtyBNaWNoYWVsIMK3IER3aWdodCIKICAgICAgICB9CgogICAgICAgIC8vIOKUgOKUgCBFeHRlcm5hbCBzeXN0ZW1zIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgIGdyb3EgPSBzb2Z0d2FyZVN5c3RlbSAiR3JvcSBDbG91ZCIgIkhvc3RlZCBMTE0gaW5mZXJlbmNlIG9uIGN1c3RvbSBMUFUgaGFyZHdhcmUuIE1vZGVsOiBsbGFtYS0zLjMtNzBiLXZlcnNhdGlsZS4iIHsKICAgICAgICAgICAgdGFncyAiRXh0ZXJuYWwiCiAgICAgICAgfQoKICAgICAgICBzdXBhYmFzZSA9IHNvZnR3YXJlU3lzdGVtICJTdXBhYmFzZSIgIk1hbmFnZWQgUG9zdGdyZVNRTCB3aXRoIHBndmVjdG9yIGV4dGVuc2lvbi4gU3RvcmVzIDM4NC1kaW0gc2NlbmUgZW1iZWRkaW5ncyB3aXRoIEhOU1cgaW5kZXguIiB7CiAgICAgICAgICAgIHRhZ3MgIkV4dGVybmFsIgogICAgICAgIH0KCiAgICAgICAgLy8g4pSA4pSAIFJlbGF0aW9uc2hpcHMg4oCUIGNvbnRhaW5lciBsZXZlbCDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICB1c2VyICAgIC0+IHNwYSAgICAgICJPcGVucyBhcHAsIHNlbGVjdHMgY2hhcmFjdGVyLCB0eXBlcyBtZXNzYWdlcyIgICAiSFRUUFMiCiAgICAgICAgc3BhICAgICAtPiBhcGkgICAgICAiQ2hhdCBhbmQgY29udHJvbCBmcmFtZXMiICAgICAgICAgICAgICAgICAgICAgICAgIldlYlNvY2tldCAvIFdTUyIKICAgICAgICBhcGkgICAgIC0+IGdyb3EgICAgICJjaGF0L2NvbXBsZXRpb25zIChzdHJlYW1pbmcpIiAgICAgICAgICAgICAgICAgICAiSFRUUFMgwrcgU1NFIgogICAgICAgIGFwaSAgICAgLT4gc3VwYWJhc2UgIm1hdGNoX3R2X3NjZW5lcygpIFJQQyIgICAgICAgICAgICAgICAgICAgICAgICAgIkhUVFBTIMK3IHN1cGFiYXNlLXB5IDIuMjgiCiAgICAgICAgYXBpICAgICAtPiBwcm9maWxlcyAiUmVhZHMgY2hhcmFjdGVyIHBlcnNvbmFzIGF0IHN0YXJ0dXAiCgogICAgICAgIC8vIOKUgOKUgCBSZWxhdGlvbnNoaXBzIOKAlCBjb21wb25lbnQgbGV2ZWwg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgY1dzSG9vayAgIC0+IGNXcyAgICAgICJDb25uZWN0cyBhbmQgZm9yd2FyZHMgSlNPTiBmcmFtZXMiCiAgICAgICAgY0NoYXRIb29rIC0+IGNXc0hvb2sgICJzZW5kKCkgLyBvbm1lc3NhZ2UgY2FsbGJhY2siCgogICAgICAgIGNXcyAgICAgIC0+IGNSYWcgICAgICJUcmlnZ2VycyB0d28tcGFzcyByZXRyaWV2YWwgcGVyIHVzZXIgbWVzc2FnZSIKICAgICAgICBjV3MgICAgICAtPiBjUHJvbXB0ICAiUmVxdWVzdHMgYXNzZW1ibGVkIHN5c3RlbSBwcm9tcHQiCiAgICAgICAgY1dzICAgICAgLT4gY0dyb3EgICAgIlNlbmRzIGZ1bGwgY29udmVyc2F0aW9uIHRvIExMTSIKICAgICAgICBjV3MgICAgICAtPiBjQ2xlYW4gICAiUGlwZXMgcmF3IHRva2VuIHN0cmVhbSB0aHJvdWdoIGNsZWFuZXIiCiAgICAgICAgY1Byb21wdCAgLT4gY1JhZyAgICAgIkluamVjdHMgMyBjYW5vbiBzY2VuZXMgKyAyIHZvaWNlIGV4ZW1wbGFycyIKICAgICAgICBjUHJvbXB0ICAtPiBjUHJvZmlsZSAiUmVhZHMgY2hhcmFjdGVyIGlkZW50aXR5LCBzcGVlY2ggc3R5bGUsIHJ1bGVzIgogICAgICAgIGNSYWcgICAgIC0+IHN1cGFiYXNlICJTaW1pbGFyaXR5IHNlYXJjaCDigJQgZmlsdGVyOiBzaG93ICsgZG9jX3R5cGUgKyBoYXNfPGNoYXJhY3Rlcj4iCiAgICAgICAgY0dyb3EgICAgLT4gZ3JvcSAgICAgIlN0cmVhbWluZyBMTE0gY2FsbCDigJQgbGxhbWEtMy4zLTcwYi12ZXJzYXRpbGUiCgogICAgICAgIC8vIOKUgOKUgCBEZXBsb3ltZW50IG1vZGVsIOKAlCBSZW5kZXIgcHJvZHVjdGlvbiDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICBkZXBsb3ltZW50RW52aXJvbm1lbnQgInByb2R1Y3Rpb24iIHsKCiAgICAgICAgICAgIGRlcGxveW1lbnROb2RlICJVc2VyJ3MgQnJvd3NlciIgIkVuZC11c2VyIGRldmljZSIgIkNocm9tZSDCtyBTYWZhcmkgwrcgRmlyZWZveCIgewogICAgICAgICAgICAgICAgY29udGFpbmVySW5zdGFuY2Ugc3BhCiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIGRlcGxveW1lbnROb2RlICJSZW5kZXIuY29tIiAiQ2xvdWQgUGFhUyDigJQgUHl0aG9uIDMuMTMgd2ViIHNlcnZpY2UiICJ0di1jaGFyYWN0ZXItY2hhdGJvdCIgewogICAgICAgICAgICAgICAgaW5mcmFzdHJ1Y3R1cmVOb2RlICJzdGF0aWMvIiAiQnVpbHQgUmVhY3QgU1BBIGFzc2V0cyBjb3BpZWQgaGVyZSBkdXJpbmcgYnVpbGQuIgogICAgICAgICAgICAgICAgY29udGFpbmVySW5zdGFuY2UgYXBpCiAgICAgICAgICAgICAgICBjb250YWluZXJJbnN0YW5jZSBwcm9maWxlcwogICAgICAgICAgICB9CgogICAgICAgICAgICBkZXBsb3ltZW50Tm9kZSAiRXh0ZXJuYWwgU2VydmljZXMiICJNYW5hZ2VkIHRoaXJkLXBhcnR5IHNlcnZpY2VzIiAiIiB7CiAgICAgICAgICAgICAgICBkZXBsb3ltZW50Tm9kZSAiR3JvcSBDbG91ZCIgIkV4dGVybmFsIOKAlCBhcGkuZ3JvcS5jb20iICJMUFUgaW5mZXJlbmNlIGNsdXN0ZXIiIHsKICAgICAgICAgICAgICAgICAgICBzb2Z0d2FyZVN5c3RlbUluc3RhbmNlIGdyb3EKICAgICAgICAgICAgICAgIH0KCiAgICAgICAgICAgICAgICBkZXBsb3ltZW50Tm9kZSAiU3VwYWJhc2UgQ2xvdWQiICJFeHRlcm5hbCDigJQgc3VwYWJhc2UuY29tIiAiTWFuYWdlZCBQb3N0Z3JlU1FMICsgcGd2ZWN0b3IiIHsKICAgICAgICAgICAgICAgICAgICBzb2Z0d2FyZVN5c3RlbUluc3RhbmNlIHN1cGFiYXNlCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICB9CgogICAgdmlld3MgewoKICAgICAgICAvLyDilIDilIAgTGV2ZWwgMSDigJQgU3lzdGVtIENvbnRleHQg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgc3lzdGVtQ29udGV4dCBjaGF0Ym90ICJMMV9Db250ZXh0IiAiTGV2ZWwgMSDigJQgU3lzdGVtIENvbnRleHQ6IHdobyB1c2VzIHRoZSBjaGF0Ym90IGFuZCB3aGljaCBleHRlcm5hbCBzeXN0ZW1zIGl0IGRlcGVuZHMgb24uIiB7CiAgICAgICAgICAgIGluY2x1ZGUgKgogICAgICAgICAgICBhdXRvTGF5b3V0IGxyCiAgICAgICAgfQoKICAgICAgICAvLyDilIDilIAgTGV2ZWwgMiDigJQgQ29udGFpbmVycyDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKICAgICAgICBjb250YWluZXIgY2hhdGJvdCAiTDJfQ29udGFpbmVycyIgIkxldmVsIDIg4oCUIENvbnRhaW5lcnM6IHRoZSBkZXBsb3lhYmxlIHVuaXRzIGFuZCBkYXRhIHN0b3Jlcy4iIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9MYXlvdXQgbHIKICAgICAgICB9CgogICAgICAgIC8vIOKUgOKUgCBMZXZlbCAzIOKAlCBCYWNrZW5kIGNvbXBvbmVudHMg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgY29tcG9uZW50IGFwaSAiTDNfQmFja2VuZCIgIkxldmVsIDMg4oCUIEJhY2tlbmQgQ29tcG9uZW50czogaW50ZXJuYWwgc3RydWN0dXJlIG9mIHRoZSBGYXN0QVBJIHNlcnZlci4iIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9MYXlvdXQgbHIKICAgICAgICB9CgogICAgICAgIC8vIOKUgOKUgCBMZXZlbCAzIOKAlCBGcm9udGVuZCBjb21wb25lbnRzIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAogICAgICAgIGNvbXBvbmVudCBzcGEgIkwzX0Zyb250ZW5kIiAiTGV2ZWwgMyDigJQgRnJvbnRlbmQgQ29tcG9uZW50czogUmVhY3QgU1BBIHN0cnVjdHVyZS4iIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9MYXlvdXQgbHIKICAgICAgICB9CgogICAgICAgIC8vIOKUgOKUgCBEZXBsb3ltZW50IOKAlCBSZW5kZXIg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgZGVwbG95bWVudCBjaGF0Ym90IHByb2R1Y3Rpb24gIkQxX1JlbmRlciIgIkRlcGxveW1lbnQgb24gUmVuZGVyLmNvbSAoc2luZ2xlIHdlYiBzZXJ2aWNlKS4iIHsKICAgICAgICAgICAgaW5jbHVkZSAqCiAgICAgICAgICAgIGF1dG9MYXlvdXQgbHIKICAgICAgICB9CgogICAgICAgIC8vIOKUgOKUgCBTdHlsZXMg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACiAgICAgICAgc3R5bGVzIHsKCiAgICAgICAgICAgIGVsZW1lbnQgIlBlcnNvbiIgewogICAgICAgICAgICAgICAgc2hhcGUgICAgICBQZXJzb24KICAgICAgICAgICAgICAgIGJhY2tncm91bmQgIzFlM2E1ZgogICAgICAgICAgICAgICAgY29sb3IgICAgICAjZTJlOGYwCiAgICAgICAgICAgICAgICBzdHJva2UgICAgICMzOGJkZjgKICAgICAgICAgICAgICAgIGZvbnRTaXplICAgMTQKICAgICAgICAgICAgfQoKICAgICAgICAgICAgZWxlbWVudCAiU29mdHdhcmUgU3lzdGVtIiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICMxZTI5M2IKICAgICAgICAgICAgICAgIGNvbG9yICAgICAgI2UyZThmMAogICAgICAgICAgICAgICAgc3Ryb2tlICAgICAjMzM0MTU1CiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIGVsZW1lbnQgIkV4dGVybmFsIiB7CiAgICAgICAgICAgICAgICBiYWNrZ3JvdW5kICMwZjE3MmEKICAgICAgICAgICAgICAgIGNvbG9yICAgICAgIzk0YTNiOAogICAgICAgICAgICAgICAgc3Ryb2tlICAgICAjMWUyOTNiCiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIGVsZW1lbnQgIkNvbnRhaW5lciIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjMTYyMDMyCiAgICAgICAgICAgICAgICBjb2xvciAgICAgICNlMmU4ZjAKICAgICAgICAgICAgICAgIHN0cm9rZSAgICAgIzM4YmRmOAogICAgICAgICAgICB9CgogICAgICAgICAgICBlbGVtZW50ICJDb21wb25lbnQiIHsKICAgICAgICAgICAgICAgIGJhY2tncm91bmQgIzBkMWIyYQogICAgICAgICAgICAgICAgY29sb3IgICAgICAjY2JkNWUxCiAgICAgICAgICAgICAgICBzdHJva2UgICAgICMxZTNhNWYKICAgICAgICAgICAgfQoKICAgICAgICAgICAgZWxlbWVudCAiV2ViIEJyb3dzZXIiIHsKICAgICAgICAgICAgICAgIHNoYXBlIFdlYkJyb3dzZXIKICAgICAgICAgICAgfQoKICAgICAgICAgICAgZWxlbWVudCAiSW5mcmFzdHJ1Y3R1cmUgTm9kZSIgewogICAgICAgICAgICAgICAgYmFja2dyb3VuZCAjMWEyNzQ0CiAgICAgICAgICAgICAgICBjb2xvciAgICAgICM5NGEzYjgKICAgICAgICAgICAgICAgIHN0cm9rZSAgICAgIzMzNDE1NQogICAgICAgICAgICB9CgogICAgICAgICAgICByZWxhdGlvbnNoaXAgIlJlbGF0aW9uc2hpcCIgewogICAgICAgICAgICAgICAgY29sb3IgICAgICNlMmU4ZjAKICAgICAgICAgICAgICAgIHRoaWNrbmVzcyAyCiAgICAgICAgICAgIH0KICAgICAgICB9CgogICAgICAgIHRoZW1lIGRlZmF1bHQKICAgIH0KfQ=="
+  },
+  "views" : {
+    "componentViews" : [ {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "containerId" : "9",
+      "description" : "Level 3 — Backend Components: internal structure of the FastAPI server.",
+      "elements" : [ {
+        "id" : "3",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "10",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "11",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "12",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "13",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "14",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "15",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "16",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "18",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "19",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "L3_Backend",
+      "name" : "Component View: TV Character Chatbot - FastAPI Server",
+      "order" : 3,
+      "relationships" : [ {
+        "id" : "30"
+      }, {
+        "id" : "32"
+      }, {
+        "id" : "33"
+      }, {
+        "id" : "34"
+      }, {
+        "id" : "35"
+      }, {
+        "id" : "36"
+      }, {
+        "id" : "37"
+      }, {
+        "id" : "38"
+      }, {
+        "id" : "39"
+      } ]
+    }, {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "containerId" : "3",
+      "description" : "Level 3 — Frontend Components: React SPA structure.",
+      "elements" : [ {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "5",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "6",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "7",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "8",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "9",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalContainerBoundariesVisible" : false,
+      "key" : "L3_Frontend",
+      "name" : "Component View: TV Character Chatbot - React SPA",
+      "order" : 4,
+      "relationships" : [ {
+        "id" : "29"
+      }, {
+        "id" : "31"
+      } ]
+    } ],
+    "configuration" : {
+      "branding" : { },
+      "lastSavedView" : "D1_Render",
+      "metadataSymbols" : "SquareBrackets",
+      "styles" : {
+        "elements" : [ {
+          "background" : "#0d1b2a",
+          "color" : "#cbd5e1",
+          "stroke" : "#1e3a5f",
+          "tag" : "Component"
+        }, {
+          "background" : "#162032",
+          "color" : "#e2e8f0",
+          "stroke" : "#38bdf8",
+          "tag" : "Container"
+        }, {
+          "background" : "#0f172a",
+          "color" : "#94a3b8",
+          "stroke" : "#1e293b",
+          "tag" : "External"
+        }, {
+          "background" : "#1a2744",
+          "color" : "#94a3b8",
+          "stroke" : "#334155",
+          "tag" : "Infrastructure Node"
+        }, {
+          "background" : "#1e3a5f",
+          "color" : "#e2e8f0",
+          "fontSize" : 14,
+          "shape" : "Person",
+          "stroke" : "#38bdf8",
+          "tag" : "Person"
+        }, {
+          "background" : "#1e293b",
+          "color" : "#e2e8f0",
+          "stroke" : "#334155",
+          "tag" : "Software System"
+        }, {
+          "shape" : "WebBrowser",
+          "tag" : "Web Browser"
+        } ],
+        "relationships" : [ {
+          "color" : "#e2e8f0",
+          "tag" : "Relationship",
+          "thickness" : 2
+        } ]
+      },
+      "terminology" : { },
+      "themes" : [ "https://static.structurizr.com/themes/default/theme.json" ]
+    },
+    "containerViews" : [ {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "description" : "Level 2 — Containers: the deployable units and data stores.",
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "3",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "9",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "17",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "18",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "19",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_Containers",
+      "name" : "Container View: TV Character Chatbot",
+      "order" : 2,
+      "relationships" : [ {
+        "id" : "20"
+      }, {
+        "id" : "22"
+      }, {
+        "id" : "23"
+      }, {
+        "id" : "25"
+      }, {
+        "id" : "27"
+      } ],
+      "softwareSystemId" : "2"
+    } ],
+    "deploymentViews" : [ {
+      "automaticLayout" : {
+        "applied" : true,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "description" : "Deployment on Render.com (single web service).",
+      "dimensions" : {
+        "height" : 2776,
+        "width" : 2410
+      },
+      "elements" : [ {
+        "id" : "40",
+        "x" : 175,
+        "y" : 175
+      }, {
+        "id" : "41",
+        "x" : 220,
+        "y" : 763
+      }, {
+        "id" : "42",
+        "x" : 175,
+        "y" : 175
+      }, {
+        "id" : "43",
+        "x" : 970,
+        "y" : 163
+      }, {
+        "id" : "44",
+        "x" : 970,
+        "y" : 763
+      }, {
+        "id" : "46",
+        "x" : 1720,
+        "y" : 763
+      }, {
+        "id" : "48",
+        "x" : 175,
+        "y" : 175
+      }, {
+        "id" : "49",
+        "x" : 175,
+        "y" : 175
+      }, {
+        "id" : "50",
+        "x" : 1720,
+        "y" : 1409
+      }, {
+        "id" : "52",
+        "x" : 175,
+        "y" : 175
+      }, {
+        "id" : "53",
+        "x" : 1720,
+        "y" : 2021
+      } ],
+      "environment" : "production",
+      "key" : "D1_Render",
+      "name" : "Deployment View: TV Character Chatbot - production",
+      "order" : 5,
+      "relationships" : [ {
+        "id" : "45"
+      }, {
+        "id" : "47"
+      }, {
+        "id" : "51",
+        "vertices" : [ {
+          "x" : 1511,
+          "y" : 1242
+        } ]
+      }, {
+        "id" : "54",
+        "vertices" : [ {
+          "x" : 1511,
+          "y" : 1888
+        } ]
+      } ],
+      "softwareSystemId" : "2"
+    } ],
+    "systemContextViews" : [ {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "description" : "Level 1 — System Context: who uses the chatbot and which external systems it depends on.",
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "18",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "19",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "key" : "L1_Context",
+      "name" : "System Context View: TV Character Chatbot",
+      "order" : 1,
+      "relationships" : [ {
+        "id" : "21"
+      }, {
+        "id" : "24"
+      }, {
+        "id" : "26"
+      } ],
+      "softwareSystemId" : "2"
+    } ]
+  }
+}

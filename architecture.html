@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TV Character Chatbot — Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: black;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* ── Slide: fixed 16:9 canvas, auto-scaled to viewport ─── */
+  .slide {
+    width: 1280px;
+    height: 720px;
+    background: black;
+    background-image:
+      radial-gradient(ellipse 60% 50% at 50% 0%, rgba(124,58,237,.08) 0%, transparent 70%),
+      radial-gradient(circle, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: auto, 24px 24px;
+    border: 1px solid #1a1a24;
+    border-radius: 12px;
+    padding: 22px 28px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transform-origin: center center;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #c8ccd4;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ── Title row ───────────────────────────────────────────── */
+  .title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .title-row h1 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: -.3px;
+  }
+  .title-row h1 span {
+    background: linear-gradient(135deg, #a78bfa, #818cf8, #38bdf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .title-row .sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #334155;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  /* ── Main flow row (top, ~58% of height) ────────────────── */
+  .main-row {
+    display: grid;
+    grid-template-columns: 1fr 28px 1.45fr 28px 1fr 1fr;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── Arrow connector ─────────────────────────────────────── */
+  .connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-shrink: 0;
+  }
+  .connector .shaft {
+    flex: 1;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, #334155 30%, #334155 70%, transparent);
+    max-height: 60px;
+  }
+  .connector .arr {
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #475569;
+  }
+  /* horizontal arrow */
+  .h-arr {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+  .h-arr .shaft { width: 100%; height: 1px; background: linear-gradient(to right, transparent, #334155 30%, #334155 70%, transparent); }
+  .h-arr .arr   { width: 0; height: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 5px solid #475569; }
+
+  /* ── Layer card ──────────────────────────────────────────── */
+  .layer {
+    border-radius: 10px;
+    padding: 10px 12px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    overflow: hidden;
+  }
+  .layer::before {
+    content: attr(data-label);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    margin-bottom: 1px;
+    flex-shrink: 0;
+  }
+
+  /* accent themes */
+  .layer.client  { background: #0a0f1a; border: 1px solid #38bdf818; }
+  .layer.client::before  { color: #38bdf8; }
+  .layer.backend { background: #0d0a1a; border: 1px solid #a78bfa18; }
+  .layer.backend::before { color: #a78bfa; }
+  .layer.rag     { background: #0a1510; border: 1px solid #34d39918; }
+  .layer.rag::before     { color: #34d399; }
+  .layer.llm     { background: #14100a; border: 1px solid #fb923c18; }
+  .layer.llm::before     { color: #fb923c; }
+  .layer.build   { background: #130a12; border: 1px solid #f472b618; }
+  .layer.build::before   { color: #f472b6; }
+  .layer.deploy  { background: #141108; border: 1px solid #facc1518; }
+  .layer.deploy::before  { color: #facc15; }
+
+  /* ── Box inside a layer ──────────────────────────────────── */
+  .box {
+    background: #0d0d15;
+    border: 1px solid #1a1a24;
+    border-radius: 7px;
+    padding: 7px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+  }
+  .box .t {
+    font-size: 11px;
+    font-weight: 600;
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+  .box .d {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #b0b2b6;
+    line-height: 1.55;
+  }
+  .box .d b { color: #b0b2b6; font-weight: 500; }
+
+  /* ── Badge ───────────────────────────────────────────────── */
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    width: fit-content;
+    flex-shrink: 0;
+  }
+  .b-blue   { color: #38bdf8; background: #38bdf810; border: 1px solid #38bdf820; }
+  .b-purple { color: #a78bfa; background: #a78bfa10; border: 1px solid #a78bfa20; }
+  .b-green  { color: #34d399; background: #34d39910; border: 1px solid #34d39920; }
+  .b-orange { color: #fb923c; background: #fb923c10; border: 1px solid #fb923c20; }
+  .b-pink   { color: #f472b6; background: #f472b610; border: 1px solid #f472b620; }
+  .b-yellow { color: #facc15; background: #facc1510; border: 1px solid #facc1520; }
+
+  /* ── Bottom strip ────────────────────────────────────────── */
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .bottom-row .layer {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 12px;
+  }
+  .bottom-row .layer::before {
+    width: 100%;
+    margin-bottom: 0;
+  }
+  .bottom-row .box { flex: 1; min-width: 100px; }
+
+  /* ── Divider ─────────────────────────────────────────────── */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .divider hr { flex: 1; border: none; border-top: 1px solid #1a1a24; }
+  .divider span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: #1e293b;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ── Vertical divider between RAG and LLM ───────────────── */
+  .vdiv {
+    width: 1px;
+    background: #1a1a24;
+    margin: 6px 0;
+    align-self: stretch;
+  }
+</style>
+<script>
+  function fitSlide() {
+    const slide = document.querySelector('.slide');
+    const scaleX = window.innerWidth  / 1280;
+    const scaleY = window.innerHeight / 720;
+    slide.style.transform = `scale(${Math.min(scaleX, scaleY) * .96})`;
+  }
+  window.addEventListener('DOMContentLoaded', fitSlide);
+  window.addEventListener('resize', fitSlide);
+</script>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ── Title ─────────────────────────────────────────────── -->
+  <div class="title-row">
+    <h1>TV Character <span>Chatbot</span></h1>
+    <span class="sub">System Architecture</span>
+  </div>
+
+  <!-- ── Main flow ─────────────────────────────────────────── -->
+  <div class="main-row">
+
+    <!-- CLIENT -->
+    <div class="layer client" data-label="Client">
+      <div class="box">
+        <div class="t">⚛ React SPA</div>
+        <div class="d"><b>React</b> 18 · <b>TS</b> 5 · <b>Vite</b> 5<br><b>Tailwind</b> CSS 3.4</div>
+        <span class="badge b-blue">SPA</span>
+      </div>
+      <div class="box">
+        <div class="t">🧩 Components</div>
+        <div class="d">LandingPage · CharacterCard<br>ChatView · Message<br>TypingDots · InputArea</div>
+      </div>
+      <div class="box">
+        <div class="t">🔌 Hooks</div>
+        <div class="d"><b>useWebSocket</b> — reconnect 3s<br><b>useChat</b> — RAF token batching</div>
+        <span class="badge b-blue">ws://host/ws</span>
+      </div>
+    </div>
+
+    <!-- arrow → -->
+    <div class="connector" style="padding: 0 2px;">
+      <div class="shaft"></div>
+      <div class="arr"></div>
+      <div style="font-family:monospace;font-size:7px;color:#334155;margin-top:3px;writing-mode:vertical-rl;letter-spacing:1px;">WSS</div>
+    </div>
+
+    <!-- BACKEND -->
+    <div class="layer backend" data-label="Backend">
+      <div class="box">
+        <div class="t">🚀 FastAPI</div>
+        <div class="d"><b>FastAPI</b> 0.135 · <b>Uvicorn</b> 0.41<br>WS /ws · GET /health · GET /characters</div>
+        <span class="badge b-purple">server_llama.py · $PORT</span>
+      </div>
+      <div class="box">
+        <div class="t">🎭 Prompt Builder</div>
+        <div class="d">① Roleplay contract<br>② Profile (identity · speech · rules)<br>③ Canon ×3 + Exemplar ×2 (RAG)<br>④ History (last 10 turns)</div>
+      </div>
+      <div class="box">
+        <div class="t">🧹 Post-Process</div>
+        <div class="d">Strip &lt;think&gt; blocks<br>Remove *asterisks* [brackets]<br>Word queue → WS stream</div>
+      </div>
+    </div>
+
+    <!-- arrow → -->
+    <div class="connector" style="padding: 0 2px;">
+      <div class="shaft"></div>
+      <div class="arr"></div>
+      <div style="font-family:monospace;font-size:7px;color:#334155;margin-top:3px;writing-mode:vertical-rl;letter-spacing:1px;">HTTPS</div>
+    </div>
+
+    <!-- RAG -->
+    <div class="layer rag" data-label="RAG">
+      <div class="box">
+        <div class="t">🗄 Supabase</div>
+        <div class="d"><b>PostgreSQL</b> + pgvector<br><b>Index:</b> HNSW cosine (384d)<br><b>RPC:</b> match_tv_scenes()</div>
+        <span class="badge b-green">Cloud · Primary</span>
+      </div>
+      <div class="box">
+        <div class="t">🔍 Two-Pass</div>
+        <div class="d"><b>Canon:</b> 20 → MMR → 3 scenes<br><b>Exemplar:</b> 10 → top 2<br>Filter: show + has_&lt;char&gt;</div>
+      </div>
+      <div class="box">
+        <div class="t">📐 Embed</div>
+        <div class="d"><b>all-MiniLM-L6-v2</b><br>384-dim · normalised<br>sentence-transformers 5.2</div>
+      </div>
+    </div>
+
+    <!-- LLM (no arrow, same tier) -->
+    <div class="layer llm" data-label="LLM" style="margin-left:12px;">
+      <div class="box">
+        <div class="t">🧠 Groq</div>
+        <div class="d">api.groq.com/openai/v1<br>OpenAI SDK 2.26<br><b>Auth:</b> GROQ_API_KEY</div>
+        <span class="badge b-orange">SSE Streaming</span>
+      </div>
+      <div class="box">
+        <div class="t">🦙 Llama 3.3 70B</div>
+        <div class="d">llama-3.3-70b-versatile<br>128K ctx · LPU hardware<br>~200 tok/s</div>
+        <span class="badge b-orange">Default model</span>
+      </div>
+      <div class="box">
+        <div class="t">📋 Profiles</div>
+        <div class="d">character_profiles.json<br>Sheldon · Michael · Dwight<br>identity · speech · triggers</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Divider ────────────────────────────────────────────── -->
+  <div class="divider">
+    <hr><span>Offline Build Pipeline</span><hr>
+  </div>
+
+  <!-- ── Bottom strip ──────────────────────────────────────── -->
+  <div class="bottom-row">
+
+    <!-- Build -->
+    <div class="layer build" data-label="Data Pipeline">
+      <div class="box">
+        <div class="t">📄 CSV</div>
+        <div class="d">merged_tv_dialogues.csv<br>TBBT + The Office</div>
+      </div>
+      <div class="box">
+        <div class="t">✂️ Chunking</div>
+        <div class="d"><b>TBBT:</b> 1 scene = 1 doc<br><b>Office:</b> merge ≥8 lines<br>Canon + Exemplar docs</div>
+        <span class="badge b-pink">build_chromadb.py</span>
+      </div>
+      <div class="box">
+        <div class="t">⬆️ Ingest</div>
+        <div class="d">Embed → batch 100<br>Upsert → Supabase<br>has_&lt;char&gt; flags</div>
+        <span class="badge b-pink">build_supabase.py</span>
+      </div>
+      <div class="box">
+        <div class="t">🎤 Profiler</div>
+        <div class="d">Groq LLM → JSON<br>3 attempts / char</div>
+        <span class="badge b-pink">character_profiler.py</span>
+      </div>
+    </div>
+
+    <!-- Deploy -->
+    <div class="layer deploy" data-label="Deployment">
+      <div class="box">
+        <div class="t">🌐 Render</div>
+        <div class="d"><b>Build:</b> npm build → cp dist/ static/ → pip install<br><b>Start:</b> python server_llama.py --host 0.0.0.0 --port $PORT<br><b>Static:</b> FastAPI mounts ./static/ as SPA</div>
+        <span class="badge b-yellow">Python 3.13 · Single Service</span>
+      </div>
+      <div class="box">
+        <div class="t">🔑 Env Vars</div>
+        <div class="d"><b>GROQ_API_KEY</b> — required<br><b>SUPABASE_URL</b><br><b>SUPABASE_SERVICE_KEY</b></div>
+      </div>
+      <div class="box">
+        <div class="t">🔄 CI/CD</div>
+        <div class="d">git push → auto-deploy<br>render.yaml · autoDeploy<br>GET /health check</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>
