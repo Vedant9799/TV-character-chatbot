@@ -129,29 +129,28 @@
   }
 
   /* accent themes */
-  .layer.client  { background: #0a0f1a; border: 1px solid #38bdf818; }
-  .layer.client::before  { color: #38bdf8; }
-  .layer.backend { background: #0d0a1a; border: 1px solid #a78bfa18; }
-  .layer.backend::before { color: #a78bfa; }
-  .layer.rag     { background: #0a1510; border: 1px solid #34d39918; }
-  .layer.rag::before     { color: #34d399; }
-  .layer.llm     { background: #14100a; border: 1px solid #fb923c18; }
-  .layer.llm::before     { color: #fb923c; }
-  .layer.build   { background: #130a12; border: 1px solid #f472b618; }
-  .layer.build::before   { color: #f472b6; }
-  .layer.deploy  { background: #141108; border: 1px solid #facc1518; }
-  .layer.deploy::before  { color: #facc15; }
+  .layer {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+  .layer::before { color: var(--accent); }
+  .layer.client  { --accent:#38bdf8; --soft:#38bdf836; background: linear-gradient(180deg, #10233b 0%, #081321 100%); border: 1px solid var(--soft); }
+  .layer.backend { --accent:#a78bfa; --soft:#a78bfa36; background: linear-gradient(180deg, #22153d 0%, #110a22 100%); border: 1px solid var(--soft); }
+  .layer.rag     { --accent:#34d399; --soft:#34d39936; background: linear-gradient(180deg, #0d2a22 0%, #091713 100%); border: 1px solid var(--soft); }
+  .layer.llm     { --accent:#fb923c; --soft:#fb923c36; background: linear-gradient(180deg, #342012 0%, #171008 100%); border: 1px solid var(--soft); }
+  .layer.build   { --accent:#f472b6; --soft:#f472b636; background: linear-gradient(180deg, #321326 0%, #170a12 100%); border: 1px solid var(--soft); }
+  .layer.deploy  { --accent:#facc15; --soft:#facc1536; background: linear-gradient(180deg, #30270b 0%, #171308 100%); border: 1px solid var(--soft); }
 
   /* ── Box inside a layer ──────────────────────────────────── */
   .box {
-    background: #0d0d15;
-    border: 1px solid #1a1a24;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)), #0d0d15;
+    border: 1px solid var(--soft, #1a1a24);
     border-radius: 7px;
     padding: 7px 9px;
     display: flex;
     flex-direction: column;
     gap: 4px;
     flex: 1;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
   }
   .box .t {
     font-size: 11px;
@@ -380,11 +379,11 @@
       </div>
       <div class="box">
         <div class="t">🔑 Env Vars</div>
-        <div class="d"><b>GROQ_API_KEY</b> — required<br><b>SUPABASE_URL</b><br><b>SUPABASE_SERVICE_KEY</b></div>
+        <div class="d"><b>GROQ_API_KEY</b><br><b>SUPABASE_URL</b><br><b>SUPABASE_SERVICE_KEY</b></div>
       </div>
       <div class="box">
         <div class="t">🔄 CI/CD</div>
-        <div class="d">git push → auto-deploy<br>render.yaml · autoDeploy<br>GET /health check</div>
+        <div class="d">git push → auto-deploy<br>render.yaml · autoDeploy</div>
       </div>
     </div>
 

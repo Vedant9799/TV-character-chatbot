@@ -8,7 +8,7 @@ workspace "TV Character Chatbot" "RAG-grounded TV character roleplay chatbot —
         // ── Our system ────────────────────────────────────────────────────────
         chatbot = softwareSystem "TV Character Chatbot" "Streams in-character responses grounded in real show dialogue via RAG." {
 
-            spa = container "React SPA" "Character selection and chat UI. Served as static files from the backend." "React 18 · TypeScript 5 · Vite 5 · Tailwind CSS 3" {
+            spa = container "React SPA" "Character selection and chat UI. Served as static files from the backend." {
                 tags "Web Browser"
 
                 cLanding  = component "Landing Page"      "Character selection grid with animated portrait cards."         "LandingPage.tsx"
@@ -18,7 +18,7 @@ workspace "TV Character Chatbot" "RAG-grounded TV character roleplay chatbot —
                 cChatHook = component "useChat"           "Message state + RAF-batched token flushing (1 React update / frame)." "useChat.ts"
             }
 
-            api = container "FastAPI Server" "WebSocket server — orchestrates RAG retrieval, prompt assembly, and streamed LLM responses." "Python 3.13 · FastAPI 0.135 · Uvicorn 0.41 · server_llama.py" {
+            api = container "FastAPI Server" "WebSocket server — orchestrates RAG retrieval, prompt assembly, and streamed LLM responses." {
 
                 cWs      = component "WebSocket Handler"  "Accepts set_character / chat frames. Emits token / done / error frames." "/ws endpoint"
                 cRag     = component "RAG Retriever"      "Two-pass retrieval: 3 canon scenes (world knowledge) + 2 exemplars (voice anchor) via Supabase RPC." "retrieve_from_supabase()"
@@ -29,7 +29,7 @@ workspace "TV Character Chatbot" "RAG-grounded TV character roleplay chatbot —
                 cStatic  = component "Static File Server" "Serves the built React SPA from ./static/ with HTML fallback for client-side routing." "FastAPI StaticFiles"
             }
 
-            profiles = container "Character Profiles" "LLM-synthesised character persona definitions committed to the repo." "character_profiles.json · Sheldon · Michael · Dwight"
+            profiles = container "Character Profiles" "LLM-synthesised character persona definitions committed to the repo."
         }
 
         // ── External systems ──────────────────────────────────────────────────
@@ -115,7 +115,7 @@ workspace "TV Character Chatbot" "RAG-grounded TV character roleplay chatbot —
         // ── Deployment — Render ───────────────────────────────────────────────
         deployment chatbot production "D1_Render" "Deployment on Render.com (single web service)." {
             include *
-            autoLayout lr
+            autoLayout tb
         }
 
         // ── Styles ────────────────────────────────────────────────────────────
